@@ -246,8 +246,7 @@ describe("public dashboard HTTP boundary", () => {
   });
 
   it("contains no active password configuration or session route", async () => {
-    const [blueprint, example, bootstrap, server] = await Promise.all([
-      readFile(new URL("../../render.yaml", import.meta.url), "utf8"),
+    const [example, bootstrap, server] = await Promise.all([
       readFile(new URL("../../.env.example", import.meta.url), "utf8"),
       readFile(
         new URL("../../src/runtime/production-bootstrap.ts", import.meta.url),
@@ -256,7 +255,7 @@ describe("public dashboard HTTP boundary", () => {
       readFile(new URL("../../src/http/server.ts", import.meta.url), "utf8"),
     ]);
 
-    for (const source of [blueprint, example, bootstrap]) {
+    for (const source of [example, bootstrap]) {
       expect(source).not.toContain("AGENT_PASSWORD");
       expect(source).not.toContain("DASHBOARD_SETUP_SECRET");
     }

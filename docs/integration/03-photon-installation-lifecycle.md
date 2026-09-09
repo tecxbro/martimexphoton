@@ -222,6 +222,6 @@ ready. `/healthz` remains liveness-only.
 These tests use injected provider/cipher/owner ports. They prove lifecycle and
 repository contracts locally, not live Photon idempotency, actual credential
 rotation semantics, PostgreSQL behavior when the integration database is not
-configured, Spectrum connection, Render deployment, or physical iMessage
+configured, Spectrum connection, hosted deployment, or physical iMessage
 delivery. Protected provider and deployment evidence remains an integration
 and release responsibility.

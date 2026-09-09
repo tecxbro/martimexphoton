@@ -1,6 +1,6 @@
 # Operations Runbook
 
-This runbook covers day-two operation of the private single-instance Render deployment. Initial deployment and enrollment instructions live in [Deployment](./DEPLOYMENT.md). The release smoke record lives in [`../test/e2e/render-smoke.md`](../test/e2e/render-smoke.md).
+This runbook covers day-two operation of the private single-instance deployment. Initial deployment and enrollment instructions live in [Deployment](./DEPLOYMENT.md). The release smoke record lives in [`../test/e2e/render-smoke.md`](../test/e2e/render-smoke.md).
 
 ## Current release gate
 
@@ -41,24 +41,17 @@ To replace the owner, open **Change phone number**. U.S. owners can enter a norm
 1. Record the outgoing application commit and current `/readyz` response.
 2. Read new migration notes and confirm backward compatibility.
 3. Confirm a database recovery point exists.
-4. Validate `render.yaml` in an authenticated Render CLI workspace:
-
-   ```bash
-   render workspace set
-   npm run render:validate
-   ```
+4. Verify the container configuration, persistent volume, and service secrets. Preserve the [existing deployment UUID](./DEPLOYMENT.md#preserve-an-existing-deployment-uuid), encryption key, and database.
 
 5. Run the required local test suite and record skipped tests.
-6. Deploy the reviewed commit. Confirm the pre-deploy migration succeeds before the service starts.
+6. Deploy the reviewed commit. Confirm startup migrations succeed before the service accepts messages.
 7. Require `/healthz` HTTP 200 and `/readyz` HTTP 200.
 8. Send one authorized, non-mutating test message only after readiness passes.
 9. Restart the service and repeat readiness plus one follow-up turn.
 
-The Render CLI requires an explicit/default workspace. A validation attempt without one is not Blueprint validation evidence.
-
 ## Graceful restart
 
-Render sends `SIGTERM` using its platform-managed shutdown delay for this disk-backed service. The composed bootstrap marks readiness false and aborts active work before running stop hooks in this order:
+Configure the hosting environment to send `SIGTERM` and allow the application's bounded shutdown hooks to finish. The composed bootstrap marks readiness false and aborts active work before running stop hooks in this order:
 
 1. Spectrum receive loop.
 2. Active Codex work.
@@ -84,7 +77,7 @@ npm run codex:status
 
 Complete device login, verify `$CODEX_HOME/auth.json` remains mode `0600`, then refresh model settings. One refresh must produce one catalog persistence and only the required effective-pair probe. Capability recovery should start exactly one Spectrum run.
 
-API-key mode: replace `OPENAI_API_KEY` in Render, restart, and rerun capability probes. Do not change `CODEX_AUTH_MODE` as a fallback unless that is an explicit operator decision.
+API-key mode: replace `OPENAI_API_KEY` in the service configuration, restart, and rerun capability probes. Do not change `CODEX_AUTH_MODE` as a fallback unless that is an explicit operator decision.
 
 ### Owner identity missing or legacy migration required
 
@@ -117,7 +110,7 @@ Symptoms: `/readyz` 503; the dashboard or private logs report `SPECTRUM_STREAM_D
 Symptoms: `/healthz` 200; `/readyz` 503; readiness or private logs report `DATABASE_UNAVAILABLE`; downstream startup stages do not run.
 
 1. Stop manual message execution.
-2. Check Render Postgres health and the dynamic `DATABASE_URL` reference.
+2. Check PostgreSQL health and the configured `DATABASE_URL` secret.
 3. Restore connectivity and verify migrations.
 4. Restart the service.
 5. Run reconciliation and inspect safe failure counts/correlation IDs.
@@ -150,7 +143,7 @@ Symptoms: a task remains `needs_approval`, an approved action remains pending, o
 Symptoms: `/readyz` 503; readiness or private logs report `PERSISTENT_STORAGE_INVALID`.
 
 1. Stop execution; do not create replacement Codex threads on ephemeral storage.
-2. Verify the `/var/data` mount, ownership, space, and directory permissions.
+2. Verify the `/data` mount, ownership, space, and directory permissions.
 3. If the disk is lost, revoke potentially exposed credentials, attach replacement storage, and re-enroll Codex.
 4. Recreate workspaces from trusted remotes/backups.
 5. Resume from bounded PostgreSQL summaries.
@@ -169,7 +162,7 @@ Roll back application and schema independently.
 
 1. Stop new execution and let graceful shutdown checkpoint state.
 2. Select the last known-good application commit compatible with the **current** schema.
-3. Roll back the Render deploy to that commit.
+3. Roll back the application release to that commit.
 4. Do not undo forward-compatible migrations merely to match code.
 5. If schema rollback is mandatory, stop all workers, verify a backup/recovery point, and use only the SQL in the migration's `.notes.md`.
 6. Restart, reconcile, verify both health endpoints, and run a non-mutating authorized turn.
@@ -191,14 +184,14 @@ When ownership changes or a credential may be exposed:
 
 Before upgrading an existing service:
 
-1. Open the Web Service's private **Environment** page in Render.
-2. Delete both former dashboard credential variables using Render's save-without-deploy option.
+1. Open the Web Service's private environment configuration.
+2. Delete both former dashboard credential variables in the configuration for the next deployment.
 3. Deploy this release. Startup intentionally rejects either obsolete key, even when it is empty.
 4. Open the dashboard and verify owner, Photon, and ChatGPT state.
 
 ## Evidence and escalation
 
-Record timestamps, commit, Render deploy ID, readiness evidence, redacted diagnostic states, correlation IDs, tests run, and whether a live provider was actually exercised. Never paste raw messages, device codes, secrets, auth files, phone/email handles, or full provider exceptions into incident tickets.
+Record timestamps, commit, hosting release ID, readiness evidence, redacted diagnostic states, correlation IDs, tests run, and whether a live provider was actually exercised. Never paste raw messages, device codes, secrets, auth files, phone/email handles, or full provider exceptions into incident tickets.
 
 Escalate and keep execution paused when:
 

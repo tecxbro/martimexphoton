@@ -26,8 +26,8 @@
 - [Operations runbook](./OPERATIONS.md)
 - [Security and privacy](./SECURITY_AND_PRIVACY.md)
 - [Test plan](./maintainers/TEST_PLAN.md)
-- [Render smoke evidence checklist](../test/e2e/render-smoke.md)
-- [Render Blueprint](../render.yaml)
+- [Deployment smoke evidence checklist](../test/e2e/render-smoke.md)
+- [Container build and runtime](../Dockerfile)
 - [Primary external documentation index](./maintainers/PROVIDER_REFERENCES.md)
 
 ## Implementation entrypoints
@@ -44,7 +44,6 @@
 
 - [OpenAI Codex](https://learn.chatgpt.com/docs/llms.txt)
 - [Photon Spectrum](https://photon.codes/docs/llms.txt)
-- [Render](https://render.com/docs/llms.txt)
 - [Supermemory](https://supermemory.ai/docs/llms.txt)
 - [Drizzle ORM](https://orm.drizzle.team/llms.txt)
 - [PostgreSQL](https://www.postgresql.org/docs/)

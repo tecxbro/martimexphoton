@@ -13,7 +13,7 @@ imessage-codex-agent-boilerplate/
 ├── SECURITY.md
 ├── package.json
 ├── package-lock.json
-├── render.yaml
+├── Dockerfile
 ├── tsconfig.json
 ├── drizzle.config.ts
 ├── docs/
@@ -160,8 +160,8 @@ SUPERMEMORY_CONTAINER_PREFIX=imessage-agent
 ### Codex authentication
 
 ```dotenv
-CODEX_HOME=/var/data/codex
-AGENT_WORKSPACE_ROOT=/var/data/workspaces
+CODEX_HOME=/data/codex
+AGENT_WORKSPACE_ROOT=/data/workspaces
 CODEX_AUTH_MODE=chatgpt
 # OPENAI_API_KEY=        # used only when CODEX_AUTH_MODE=api_key
 ```
@@ -276,4 +276,4 @@ All interfaces are backed by runtime schemas in `src/agent/schemas.ts` and `src/
 | No database | PostgreSQL + Drizzle + pg-boss |
 | No agent | Codex interaction and execution runtimes |
 | No memory | Supermemory projection with PostgreSQL receipts |
-| One Render web service | One web service, one Postgres database, one attached disk |
+| One service instance | One web service, one Postgres database, one attached disk |

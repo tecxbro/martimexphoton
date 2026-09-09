@@ -1,28 +1,30 @@
 # Deploy the iMessage Codex Agent
 
-This guide takes a new Render account from the repository Blueprint to the first authorized iMessage. The executable production runtime is composed. Clean-account Render deployment and protected live-provider evidence remain separate release checks.
+This guide deploys the included Dockerfile with PostgreSQL and persistent storage, then connects the first authorized iMessage. The executable production runtime is composed. Clean deployment and protected live-provider evidence remain separate release checks.
 
-## 1. Render deployment
+## 1. Container deployment
 
-Use the repository's deploy button:
+Build the included [`Dockerfile`](../Dockerfile) from the repository root:
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tecxbro/iMessage-agent-render)
+```bash
+docker build -t imessage-codex-agent .
+```
 
-Before approving the Blueprint, confirm it creates exactly:
+Configure your hosting environment with:
 
-- one paid Node Web Service;
-- one Render PostgreSQL database; and
-- one persistent disk attached to the Web Service.
+- one long-running container instance with an HTTPS service URL;
+- one PostgreSQL database (13 or newer); and
+- one persistent volume mounted at `/data` and writable by the service user.
 
-New Blueprint deployments ask for zero user-supplied environment values. Render generates `APP_ENCRYPTION_KEY` and supplies `DATABASE_URL` from the attached database; the owner phone, Photon, and ChatGPT are configured from the deployed dashboard. The owner phone is not a Blueprint prompt.
+Supply the infrastructure environment values in section 4 before starting the service. The owner phone, Photon, and ChatGPT are configured from the deployed dashboard.
 
-The build runs `npm ci --include=dev && npm run build`, the pre-deploy phase runs `npm run db:migrate`, and the service starts with `npm start`. The generated `onrender.com` URL opens the setup dashboard; it is not an iMessage chat.
+The Dockerfile installs pinned dependencies with development and optional packages, builds TypeScript, and starts `node dist/server.js` (the same entrypoint as `npm start`). Startup applies the checked-in database migrations. Keep `.npmrc`: the Dockerfile explicitly copies it. Use `/healthz` for liveness, and supply `PORT` if your host requires a port other than the default `10000`. The service URL opens the setup dashboard.
 
 ## 2. Required accounts and credentials
 
 | Requirement | Why it is needed | Where to obtain it |
 |---|---|---|
-| Render account | Hosts the service, database, and disk | [Render](https://render.com/) |
+| Hosting environment | Runs a long-lived container with PostgreSQL and a persistent volume | Your infrastructure provider |
 | Photon account | Creates or connects the Spectrum project, iMessage line, and persistent message stream | Photon dashboard |
 | Allowed owner phone | Restricts who can command the agent | Your personal phone number |
 | ChatGPT device login or OpenAI API key | Authenticates Codex | ChatGPT account security or OpenAI Platform |
@@ -32,31 +34,40 @@ In the dashboard, U.S. owners enter a normal 10-digit phone number; `+1` is adde
 
 Never place credentials in source control, screenshots, tickets, database rows, Supermemory, or logs.
 
-## 3. Blueprint resources and expected cost shape
+## 3. Resources
 
-The checked-in [`render.yaml`](../render.yaml) declares:
+Provision these resources through your hosting environment:
 
-| Resource | Blueprint shape | Purpose |
+| Resource | Required shape | Purpose |
 |---|---|---|
-| Web Service | Starter, Oregon, one instance | Setup dashboard, health HTTP, queue workers, Codex runtime, Spectrum loop |
-| PostgreSQL | Basic 256 MB, PostgreSQL 18, Oregon | Operational source of truth and pg-boss queue |
-| Persistent disk | 1 GB at `/var/data` | Codex credentials, sessions, and workspaces |
+| Service | One long-running container | Setup dashboard, health HTTP, queue workers, Codex runtime, Spectrum loop |
+| PostgreSQL | Version 13 or newer, reachable from the service | Operational source of truth and pg-boss queue |
+| Persistent volume | Mounted at `/data` | Codex credentials, sessions, and workspaces |
 
-These are paid resources. Check current Render pricing before deployment. The disk makes this version single-instance; do not increase `numInstances` or remove the disk without redesigning credential and workspace ownership.
-
-`autoDeployTrigger: "off"` is intentional for a public deploy-button repository. Each template user controls updates to their own service.
+Size the service, database, and volume for your workload. The volume makes this version single-instance; horizontal scaling requires redesigning credential and workspace ownership. Control rollout from your own reviewed checkout.
 
 ## 4. Environment values during deployment
 
-The Blueprint supplies these values without prompting for any user input:
+Configure these values before startup:
 
-- `DATABASE_URL` from the attached database;
-- `APP_ENCRYPTION_KEY` as a generated secret;
-- `CODEX_HOME=/var/data/codex`;
-- `AGENT_WORKSPACE_ROOT=/var/data/workspaces`; and
+- `DATABASE_URL` as the PostgreSQL connection secret;
+- `DEPLOYMENT_ID` as an explicit stable UUID;
+- `APP_ENCRYPTION_KEY` as a stable 32-byte encryption secret;
+- `CODEX_HOME=/data/codex`;
+- `AGENT_WORKSPACE_ROOT=/data/workspaces`; and
 - `CODEX_AUTH_MODE=chatgpt`.
 
-No owner, provider, database, or encryption value is requested from the deployer. The phone stays in the dashboard. Existing-deployment compatibility is documented only in [Troubleshooting](./TROUBLESHOOTING.md).
+For a **new deployment only**, generate a UUID with `node -e 'console.log(require("node:crypto").randomUUID())'` and an encryption key with `openssl rand -base64 32`. Save both in the service configuration and preserve them across restarts. Never regenerate them when attaching existing application data. The phone stays in the dashboard.
+
+### Preserve an existing deployment UUID
+
+Before replacing a version that derives its UUID from `RENDER_SERVICE_ID`, run this command in that version's private service shell, from its application directory:
+
+```bash
+node --input-type=module -e 'import { loadEnvironment } from "./dist/config/env.js"; console.log(loadEnvironment().DEPLOYMENT_ID)'
+```
+
+This prints only the effective deployment UUID. Capture it in your private deployment configuration and set `DEPLOYMENT_ID` to that exact UUID before upgrading or moving hosts. Preserve the existing `APP_ENCRYPTION_KEY`, PostgreSQL data, and Codex/workspace volume as well. If the old shell is unavailable, recover the correct deployment row from PostgreSQL through a trusted operator; do not guess or generate a replacement UUID. Changing the UUID would change database and memory namespaces.
 
 See [Configuration](./CONFIGURATION.md) for every supported variable.
 
@@ -75,13 +86,13 @@ Owner status returns only a masked phone, and the write route never echoes the s
 The default mode is `CODEX_AUTH_MODE=chatgpt`.
 
 1. Enable device-code login in the ChatGPT account or workspace if required.
-2. In Render, open the deployed **Web Service** URL.
+2. Open the deployed service URL.
 3. Save the owner phone and complete Photon authentication on the agent dashboard.
 4. Select **Connect ChatGPT**, open the device-auth popup, sign in, and enter the one-time code.
 5. Keep the dashboard open. It closes the popup when the browser permits, returns focus to setup, and shows Codex preparing.
 6. Confirm the dashboard reaches **Your agent is ready** and `/readyz` returns HTTP 200.
 
-Credentials persist under `/var/data/codex`. Do not print or copy `$CODEX_HOME/auth.json`. The private **Manage > Shell** flow remains an operator recovery path if permissions need repair:
+Credentials persist under `/data/codex`. Do not print or copy `$CODEX_HOME/auth.json`. The private service shell remains an operator recovery path if permissions need repair:
 
 ```bash
 test -f "$CODEX_HOME/auth.json"
@@ -93,7 +104,7 @@ npm run codex:status
 
 API-key mode uses OpenAI Platform billing and does not use a ChatGPT device login.
 
-1. Add `OPENAI_API_KEY` as a Render secret.
+1. Add `OPENAI_API_KEY` as a service secret.
 2. Set `CODEX_AUTH_MODE=api_key`.
 3. Rebuild and deploy the Web Service.
 4. Check the dashboard or `/readyz` for authentication and capability state.
@@ -128,21 +139,21 @@ Only start after `/readyz` returns 200.
 3. Send from an unauthorized handle and confirm zero Codex child processes start.
 4. Restart the Web Service normally.
 5. Wait for `/readyz` to return 200 and send a follow-up.
-6. Record the exact commit, Render deploy ID, timestamps, redacted readiness responses, and provider paths actually exercised in [`../test/e2e/render-smoke.md`](../test/e2e/render-smoke.md).
+6. Record the exact commit, hosting release ID, timestamps, redacted readiness responses, and provider paths actually exercised in [`../test/e2e/render-smoke.md`](../test/e2e/render-smoke.md).
 
-Offline unit, integration, and chaos tests do not prove a live Render, Photon, Codex, or Supermemory path.
+Offline unit, integration, and chaos tests do not prove a live deployment, Photon, Codex, or Supermemory path.
 
 ## 10. Updating an existing deployment
 
 1. Review the incoming commit and new migration notes.
 2. Confirm a database recovery point exists.
-3. Run the repository's required checks, including `npm run docs:check` and Render schema validation.
-4. Manually deploy the reviewed revision because auto-deploy is off.
-5. Confirm the pre-deploy migration succeeds.
+3. Run the repository's required checks, including `npm run docs:check` and `npm run build`.
+4. Preserve the deployment UUID as described in section 4, then deploy the reviewed revision.
+5. Confirm startup migrations succeed before accepting messages.
 6. Require `/healthz` and `/readyz` to return 200.
 7. Run one authorized non-mutating message and one restart follow-up.
 
-Before deploying this version, delete both former dashboard credential variables from the existing Render service; startup rejects either obsolete key, even when empty. An active database owner wins. If none exists, the runtime imports `OWNER_PHONE_NUMBER`, then the former long Render alias, then one unambiguous E.164 `AGENT_OWNER_HANDLES` value. It never imports authorization from stored Photon metadata and never overwrites a database owner on later restarts. Multiple handles or a non-phone handle require the user to open the dashboard and save the intended phone. After verifying migration, old owner environment values may be removed manually.
+Before deploying this version, delete both former dashboard credential variables from the existing service; startup rejects either obsolete key, even when empty. An active database owner wins. If none exists, the runtime imports `OWNER_PHONE_NUMBER`, then the former long Render alias, then one unambiguous E.164 `AGENT_OWNER_HANDLES` value. It never imports authorization from stored Photon metadata and never overwrites a database owner on later restarts. Multiple handles or a non-phone handle require the user to open the dashboard and save the intended phone. After verifying migration, old owner environment values may be removed manually.
 
 ## 11. Rollback
 

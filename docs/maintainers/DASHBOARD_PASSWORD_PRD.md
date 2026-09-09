@@ -1,5 +1,7 @@
 # PostgreSQL-Backed Dashboard Password PRD
 
+> Historical proposal, superseded by the current dashboard onboarding and container deployment. Render-specific infrastructure and password-recovery instructions below describe the earlier design; use [Deployment](../DEPLOYMENT.md) and [Configuration](../CONFIGURATION.md) for the current application.
+
 **Status:** Proposed implementation handoff
 
 **Scope:** Single-owner Render deployment only

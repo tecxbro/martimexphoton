@@ -6,7 +6,7 @@ The target is one long-running Node.js service with three concurrent responsibil
 
 1. consume iMessage events from Spectrum Cloud’s persistent `app.messages` gRPC stream;
 2. run the durable inbound, Codex, outbound, and memory jobs backed by PostgreSQL/pg-boss; and
-3. expose liveness and readiness endpoints to Render.
+3. expose liveness and readiness endpoints to the hosting environment.
 
 The branch composes the provider, database, queue, Codex, memory, storage, health, and shutdown modules into that topology. `src/index.ts` exposes `startAgentService()` and an injected `AgentServiceBootstrap`; `src/runtime/production-bootstrap.ts` supplies the production adapters; and `src/server.ts`, used by `npm run dev` and `npm start`, starts the composed lifecycle.
 
@@ -14,14 +14,14 @@ This distinction is an intentional release boundary:
 
 | Layer | Current branch |
 |---|---|
-| Render resource declaration | Present in `render.yaml` |
+| Container build and runtime | Present in `Dockerfile`; infrastructure is provisioned by the operator |
 | Persistent storage preparation | Composed as an injectable startup stage |
 | Full health/readiness server | Used by `src/server.ts`; reports the composed operational stages |
 | Boot and graceful-shutdown ordering | Implemented as an injectable composition boundary |
 | Spectrum, PostgreSQL, Codex, and Supermemory modules | Composed with fake/unit/integration coverage |
 | Authorized receive through plan/execute/synthesize/send | Composed into the executable entrypoint; protected live path untested |
-| Clean local and Render first-message evidence | Not established |
-| Live Photon, Codex, Render, or Supermemory evidence | Not run for this release |
+| Clean local and hosted first-message evidence | Not established |
+| Live Photon, Codex, hosting, or Supermemory evidence | Not run for this release |
 
 The remainder of this document describes the composition contract and identifies where implementation evidence stops.
 
@@ -33,7 +33,7 @@ flowchart TB
   P <-->|"persistent app.messages gRPC"| T["Spectrum receive loop"]
   B["Setup browser"]
 
-  subgraph W["One Render Web Service"]
+  subgraph W["One service instance"]
     L["Setup request validation"]
     L --> DSH["Setup dashboard"]
     DSH --> PS["Photon and ChatGPT setup controllers"]
@@ -45,7 +45,7 @@ flowchart TB
     H["/healthz and /readyz"]
   end
 
-  A --> DB[("Render PostgreSQL")]
+  A --> DB[("PostgreSQL")]
   Q <--> DB
   O --> P
   I -. "bounded recall / curated writes" .-> SM["Supermemory"]
@@ -54,18 +54,18 @@ flowchart TB
   E <--> CH
 
   B --> L
-  R["Render health check"] --> H
+  R["Hosting health check"] --> H
 ```
 
-The Blueprint deliberately provisions:
+The deployment requires:
 
-- one paid Web Service with `numInstances: 1`;
-- one PostgreSQL database connected through Render’s dynamic `DATABASE_URL` reference;
-- one disk mounted at `/var/data`;
-- `CODEX_HOME=/var/data/codex` and `AGENT_WORKSPACE_ROOT=/var/data/workspaces`;
-- a pre-deploy `npm run db:migrate`; and
-- Render's platform-managed shutdown delay; disk-backed services cannot set a
-  custom `maxShutdownDelaySeconds` value in a Blueprint.
+- one long-running service instance;
+- one PostgreSQL database configured through a secret `DATABASE_URL`;
+- one persistent volume mounted at `/data`;
+- `CODEX_HOME=/data/codex` and `AGENT_WORKSPACE_ROOT=/data/workspaces`;
+- an explicit stable `DEPLOYMENT_ID` and `APP_ENCRYPTION_KEY`;
+- checked-in migrations applied by startup, with `npm run db:migrate` available as a release command; and
+- a host shutdown grace period that allows the application's bounded stop hooks to finish.
 
 The disk makes v1 single-instance. PostgreSQL is independently durable and remains the operational source of truth. The disk is for Codex credentials/session files and workspaces, not queue truth.
 
@@ -106,7 +106,7 @@ The final composition boundary starts the HTTP listener first so the process can
 
 ```mermaid
 sequenceDiagram
-  participant R as Render
+  participant R as Hosting platform
   participant H as Health server
   participant B as Bootstrap coordinator
   participant D as Disk and database
@@ -293,7 +293,7 @@ The dashboard and setup routes report device codes, verification URLs, assigned
 numbers, masked owner state, bounded provider error codes, and detailed
 readiness. Raw owner phone values, provider credentials, database credentials,
 message content, unrestricted errors, and private paths stay server-side.
-Render uses `/healthz` to avoid turning incomplete enrollment into a restart
+Configure the host to use `/healthz` to avoid turning incomplete enrollment into a restart
 loop.
 
 The current `src/server.ts` starts this health server first, runs each operational stage, and shuts the composition down on process signals. Its `/healthz` proves only that the HTTP process is alive; `/readyz` becomes `200` only after the owner, PostgreSQL, migrations, queue, Codex auth/capabilities, storage, and Spectrum are ready. A fresh deployment without an owner is deliberately live but not ready, and Spectrum intake remains stopped.
@@ -399,6 +399,6 @@ The starter intentionally does not pre-build this distributed topology.
 
 ## 13. Release evidence boundary
 
-Automated tests may verify deterministic module behavior with fakes and, when configured, a disposable PostgreSQL database. They do not establish that Render provisioned a clean account, Photon delivered/replayed a real event, Codex authenticated/resumed a live thread, or Supermemory persisted/deleted a live memory.
+Automated tests may verify deterministic module behavior with fakes and, when configured, a disposable PostgreSQL database. They do not establish that a host provisioned a clean deployment, Photon delivered/replayed a real event, Codex authenticated/resumed a live thread, or Supermemory persisted/deleted a live memory.
 
 The executable production runtime is composed. Release acceptance still requires the protected E2E, chaos, rollback, restart, and clean-room documentation exercises in [TEST_PLAN.md](./maintainers/TEST_PLAN.md). Until those are recorded, describe the provider paths as designed or locally simulated—not live-working.

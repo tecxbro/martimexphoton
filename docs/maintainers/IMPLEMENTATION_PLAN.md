@@ -16,7 +16,7 @@ The implementation does **not** modify the original starter in place during plan
 | Codex runtime | `feat/codex-runtime` | SDK wrapper, auth/capability checks, thread lifecycle, model router | Yes |
 | Memory | `feat/supermemory` | Recall, curation, deletion, isolation tests | Yes |
 | Security | `feat/security-approvals` | Sender auth, pairing, permission profiles, approvals, redaction | After identity contracts |
-| Deploy/docs | `main` | Blueprint, local setup, health/readiness, docs | After config contracts |
+| Deploy/docs | `main` | Container deployment, local setup, health/readiness, docs | After config contracts |
 
 No worktree owns the same implementation file. Shared contract changes go through the contracts branch first, then are merged or rebased into each branch.
 
@@ -72,8 +72,7 @@ Create the new repository shape, pin the runtime, define validated interfaces, a
   "db:generate": "drizzle-kit generate",
   "db:migrate": "tsx src/db/migrate.ts",
   "codex:login": "codex login --device-auth",
-  "codex:status": "codex login status",
-  "render:validate": "render blueprints validate render.yaml"
+  "codex:status": "codex login status"
 }
 ```
 
@@ -122,7 +121,7 @@ Replace the starter’s webhook flow with a persistent Spectrum Cloud receive lo
 | `src/http/readiness.ts` | Spectrum connection state and redacted diagnostics |
 | `src/index.ts` | Start receive loop concurrently with queue and HTTP server |
 | `package.json` | Remove `@spectrum-ts/express` unless another feature explicitly needs it |
-| `render.yaml` | Remove webhook secret from environment list |
+| `.env.example` | Remove webhook secret from environment list |
 
 ### Implementation details
 
@@ -222,7 +221,7 @@ A database/schema reviewer and a separate recovery-test agent are useful. They s
 ### Goal
 
 Add a constrained, testable Codex adapter that supports resumable threads,
-local or Render execution, account-aware model selection, capability probing,
+local or hosted execution, account-aware model selection, capability probing,
 and cancellation. ADR-020 supersedes the original static-profile router scope.
 
 ### Worktree
@@ -459,7 +458,7 @@ An independent security reviewer is strongly recommended. The primary implementa
 
 ---
 
-## Release phase — Render Blueprint, end-to-end recovery, documentation, and release
+## Release phase — Container deployment, end-to-end recovery, documentation, and release
 
 ### Goal
 
@@ -467,16 +466,16 @@ Make the project genuinely deployable from a clean account and prove it survives
 
 ### Current status
 
-The executable production runtime is composed on `main`. Clean-account Render deployment and protected live-provider evidence remain separate release checks.
+The executable production runtime is composed on `main`. Clean deployment and protected live-provider evidence remain separate release checks.
 
 ### Files to create or change
 
 | File | Change |
 |---|---|
-| `render.yaml` | Web service, PostgreSQL, persistent disk, dynamic database URL, generated encryption material |
+| `Dockerfile` and deployment docs | Service build/runtime, PostgreSQL, persistent volume, explicit deployment UUID and encryption key |
 | `src/http/readiness.ts` | Full component readiness |
 | `src/index.ts` | Final boot order and graceful shutdown |
-| `README.md` | Zero-to-first-message guide and Deploy to Render button |
+| `README.md` | Zero-to-first-message guide for a container deployment |
 | `docs/ARCHITECTURE.md` | Final diagrams and extension points |
 | `AGENTS.md` | Final coding rules |
 | `docs/*` | PRD, model, memory, security, testing, business, docs index |
@@ -485,23 +484,23 @@ The executable production runtime is composed on `main`. Clean-account Render de
 
 ### Implementation details
 
-1. Blueprint provisions one paid web service, one PostgreSQL database, and one persistent disk.
+1. Document provisioning one long-running container, one PostgreSQL database, and one persistent volume.
 2. Set `CODEX_HOME` and workspace root under the disk mount.
-3. Use database dynamic references; never ask the user to copy connection strings manually.
-4. Prompt for no user-supplied environment values. Keep the owner phone, Photon, and ChatGPT setup in the deployment dashboard.
+3. Configure `DATABASE_URL` through the hosting environment's secret configuration.
+4. Require an explicit stable `DEPLOYMENT_ID` and `APP_ENCRYPTION_KEY`; preserve existing values on upgrades. Keep the owner phone, Photon, and ChatGPT setup in the deployment dashboard.
 5. Start in live-but-not-ready state until Codex enrollment is complete.
-6. Document `npm run codex:login` through Render Shell and local `codex login`.
+6. Document `npm run codex:login` through the private service shell and local `codex login`.
 7. Validate disk permissions and credential storage mode at startup.
-8. Run migrations as a pre-deploy command or release step.
-9. Execute Blueprint validation in CI.
-10. Run clean local and Render smoke tests.
+8. Apply migrations through the existing startup lifecycle or an explicit release step.
+9. Keep application and documentation checks in CI.
+10. Run clean local and hosted smoke tests.
 11. Include a rollback procedure and auth re-enrollment procedure.
 12. Generate an `llms.txt` or equivalent Markdown index for implementation agents.
 
 ### Tests
 
 - Fresh local install from `.env.example` reaches first authorized message.
-- Fresh Render deploy provisions all resources and reports only expected missing auth.
+- Fresh container deployment uses the documented resources and reports only expected missing auth.
 - Device auth survives restart.
 - Kill process during plan, task, synthesis, and each outbound part; state recovers.
 - Simulate Spectrum disconnect, database timeout, Supermemory timeout, and expired Codex auth.

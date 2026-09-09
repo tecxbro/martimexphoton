@@ -12,7 +12,7 @@ The dangerous bugs are not “the model gave an imperfect answer.” They are:
 - A model broadens its own permissions or approves its own action.
 - A restart loses ChatGPT auth, Codex context, model preference, or send state.
 
-The test plan therefore treats models and providers as replaceable dependencies and verifies application invariants under failure. The executable production runtime is composed; clean-account Render deployment and protected live-provider tests remain separate evidence gates.
+The test plan therefore treats models and providers as replaceable dependencies and verifies application invariants under failure. The executable production runtime is composed; clean deployment and protected live-provider tests remain separate evidence gates.
 
 ## 2. Test layers
 
@@ -24,7 +24,7 @@ The test plan therefore treats models and providers as replaceable dependencies 
 | End-to-end | Real Photon development project and authenticated Codex | Opt-in protected environment |
 | Chaos | Kill/restart/outage at every pipeline stage | Integration and staging |
 | Security | Identity, sandbox, injection, secrets, approval replay | Fake and opt-in real sandbox |
-| Documentation | Execute setup commands from a clean environment | Fresh local/Render account |
+| Documentation | Execute setup commands from a clean environment | Fresh local/hosted environment |
 
 ## 3. Unit tests
 
@@ -326,8 +326,8 @@ A clean-room reviewer executes:
 - Database migration.
 - Codex login/status.
 - Photon setup.
-- Render Blueprint deployment.
-- Render device auth.
+- Container deployment.
+- Hosted device auth.
 - First message.
 - Recovery and credential re-enrollment.
 
@@ -337,7 +337,7 @@ Every command is copied exactly from the docs. Failures become documentation bug
 
 ```text
 Node: pinned minimum and current supported LTS
-PostgreSQL: minimum supported and Render target major
+PostgreSQL: minimum supported and deployed target major
 Tests:
   - lint/typecheck
   - unit
@@ -346,7 +346,7 @@ Tests:
   - security
   - architecture/import rules
   - secret scanning
-  - Blueprint validation
+  - container build
   - docs link check
 Optional protected:
   - live Codex smoke
@@ -362,7 +362,7 @@ The integration PR includes:
 - Chaos matrix results.
 - Exact pinned dependency versions.
 - Codex model/effort capability report.
-- Fresh Render deployment screen or redacted log evidence.
+- Fresh deployment screen or redacted log evidence.
 - Secret scan report.
 - Migration and rollback evidence.
 - Known limitations and deferred tests.

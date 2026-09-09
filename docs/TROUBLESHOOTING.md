@@ -1,12 +1,12 @@
 # Troubleshooting
 
-Start with the visible symptom. Run commands only in a trusted local terminal or the private Render Web Service shell. Redact output before sharing it.
+Start with the visible symptom. Run commands only in a trusted local terminal or the private service shell. Redact output before sharing it.
 
 ## Deploy failed during build
 
 **What it means:** Dependencies did not install or TypeScript did not compile.
 
-**Where to check:** Render build logs for the first failed command and the exact commit being built.
+**Where to check:** Container build logs for the first failed command and the exact commit being built.
 
 **Exact safe command:**
 
@@ -22,7 +22,7 @@ npm ci --include=dev && npm run build
 
 **What it means:** The new service was not started because `npm run db:migrate` could not apply or verify the checked-in migrations.
 
-**Where to check:** Render pre-deploy logs and the matching `src/db/migrations/*.notes.md` files.
+**Where to check:** Migration/startup logs and the matching `src/db/migrations/*.notes.md` files.
 
 **Exact safe command:**
 
@@ -38,7 +38,7 @@ npm run db:migrate
 
 **What it means:** The HTTP process is not reachable or could not serve liveness.
 
-**Where to check:** Render service status, start logs, port binding, and the deployed commit.
+**Where to check:** Hosting service status, start logs, port binding, and the deployed commit.
 
 **Exact safe command:**
 
@@ -54,7 +54,7 @@ curl --fail --silent --show-error "https://<service-host>/healthz"
 
 **What it means:** One or more critical components are missing, starting, failed, or degraded.
 
-**Where to check:** `/readyz` or the dashboard for bounded component/setup detail, then the corresponding private Render service logs.
+**Where to check:** `/readyz` or the dashboard for bounded component/setup detail, then the corresponding private service logs.
 
 **Exact safe command:**
 
@@ -68,13 +68,13 @@ curl --silent --show-error "https://<service-host>/readyz"
 
 ## Obsolete dashboard credential variable blocks startup
 
-**What it means:** An existing Render service still has one of the two removed dashboard credential variables. This release rejects either legacy key, including an empty value.
+**What it means:** An existing service still has one of the two removed dashboard credential variables. This release rejects either legacy key, including an empty value.
 
-**Where to check:** The deployed Web Service's private **Environment** page in Render. Do not print or copy the values.
+**Where to check:** The deployed Web Service's private environment configuration. Do not print or copy the values.
 
-**Expected result:** Delete both former dashboard credential variables using Render's save-without-deploy option, then deploy this release. The service starts and the dashboard opens directly.
+**Expected result:** Delete both former dashboard credential variables in the configuration for the next deployment, then deploy this release. The service starts and the dashboard opens directly.
 
-**Do not:** Re-add either removed credential to `render.yaml`, `.env.example`, the environment schema, or deployment instructions.
+**Do not:** Re-add either removed credential to `.env.example`, the environment schema, or deployment instructions.
 
 ## Setup action returns 403
 
@@ -90,7 +90,7 @@ curl --silent --show-error "https://<service-host>/readyz"
 
 **What it means:** No active owner identity exists in PostgreSQL, or legacy `AGENT_OWNER_HANDLES` contains multiple handles or a non-phone identity that cannot be migrated to the single-phone flow safely.
 
-**Where to check:** Open the dashboard. Check legacy owner environment keys only in the private Render Environment page; do not print their values or use stored Photon metadata as authorization evidence.
+**Where to check:** Open the dashboard. Check legacy owner environment keys only in the private service environment configuration; do not print their values or use stored Photon metadata as authorization evidence.
 
 **Expected result:** Saving one valid dashboard phone creates a masked configured status, keeps the raw phone out of responses and logs, unlocks Photon setup, and survives restart. U.S. national entry and country-selected international entry are normalized to E.164 before storage. An already active database identity takes precedence over every legacy environment value.
 
@@ -192,7 +192,7 @@ npm test -- test/chaos/durable-stage-recovery.test.ts test/chaos/outbound-restar
 
 **What it means:** PostgreSQL could not connect or respond; readiness closes to prevent untracked work.
 
-**Where to check:** Render PostgreSQL status, the dynamic `DATABASE_URL` reference, and redacted `DATABASE_UNAVAILABLE` logs.
+**Where to check:** PostgreSQL status, the configured `DATABASE_URL` secret, and redacted `DATABASE_UNAVAILABLE` logs.
 
 **Exact safe command:**
 
@@ -208,7 +208,7 @@ npm test -- test/chaos/database-timeout.test.ts
 
 **What it means:** `CODEX_HOME` or the workspace root is missing, overlapping, incorrectly permissioned, or not backed by the intended disk.
 
-**Where to check:** Render disk attachment and private shell path metadata.
+**Where to check:** Persistent volume attachment and private shell path metadata.
 
 **Exact safe command:**
 

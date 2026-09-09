@@ -50,10 +50,6 @@ function lineNumber(source, index) {
   return source.slice(0, index).split("\n").length;
 }
 
-function escapeRegularExpression(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-}
-
 function githubHeadingAnchors(source) {
   const anchors = new Set();
   const occurrences = new Map();
@@ -134,47 +130,6 @@ function documentedCommandFailures(files, scripts) {
     }
   }
   return failures;
-}
-
-function renderCommandFailures(scripts) {
-  const blueprint = readFileSync(join(REPOSITORY_ROOT, "render.yaml"), "utf8");
-  const failures = [];
-  const expected = new Map([
-    ["buildCommand", "build"],
-    ["preDeployCommand", "db:migrate"],
-    ["startCommand", "start"],
-  ]);
-  for (const [field, requiredScript] of expected) {
-    const match = new RegExp(`^\\s*${field}:\\s*(.+)$`, "mu").exec(blueprint);
-    if (match === null) {
-      failures.push(`render.yaml is missing ${field}`);
-      continue;
-    }
-    if (scripts[requiredScript] === undefined) {
-      failures.push(`render.yaml ${field} references missing package script ${requiredScript}`);
-    }
-    const command = match[1];
-    const invokesRequired = requiredScript === "start"
-      ? /\bnpm\s+start\b/u.test(command)
-      : new RegExp(`\\bnpm\\s+run\\s+${escapeRegularExpression(requiredScript)}\\b`, "u").test(command);
-    if (!invokesRequired) {
-      failures.push(`render.yaml ${field} must invoke npm ${requiredScript === "start" ? "start" : `run ${requiredScript}`}`);
-    }
-  }
-  return failures;
-}
-
-function deployButtonFailures() {
-  const readme = readFileSync(join(REPOSITORY_ROOT, "README.md"), "utf8");
-  const firstSection = readme.search(/^##\s+/mu);
-  const button = readme.indexOf("https://render.com/images/deploy-to-render-button.svg");
-  if (button === -1 || firstSection === -1 || button > firstSection) {
-    return ["README.md must place the Deploy to Render button before the first H2 section"];
-  }
-  if (!readme.includes("https://render.com/deploy?repo=https://github.com/tecxbro/iMessage-agent-render")) {
-    return ["README.md deploy button must explicitly identify the source repository"];
-  }
-  return [];
 }
 
 function publicEnvironmentVariables() {
@@ -264,8 +219,6 @@ export function runDocumentationChecks() {
   const failures = [
     ...localMarkdownLinkFailures(markdownFiles),
     ...documentedCommandFailures(markdownFiles, scripts),
-    ...renderCommandFailures(scripts),
-    ...deployButtonFailures(),
     ...environmentExampleFailures(publicVariables),
     ...stalePhraseFailures(),
     ...publicOnboardingFailures(),

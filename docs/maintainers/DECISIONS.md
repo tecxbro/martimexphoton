@@ -10,9 +10,9 @@
 
 ## ADR-002 — PostgreSQL is the default operational store
 
-**Decision:** use Render PostgreSQL, Drizzle, and pg-boss.
+**Decision:** use PostgreSQL, Drizzle, and pg-boss.
 
-**Why:** Render can provision and wire the database in the same Blueprint; one system can own transcript, identities, queues, approvals, idempotency, and audit data.
+**Why:** one system can own transcript, identities, queues, approvals, idempotency, and audit data.
 
 **Rejected:** Convex as default. It is technically viable but requires a separate project/deployment flow, weakening one-click installation. See `CONVEX_VARIANT.md`.
 
@@ -34,7 +34,7 @@
 
 ## ADR-005 — ChatGPT login is deployment enrollment, not web OAuth
 
-**Decision:** the operator completes Codex device auth once through the deployment dashboard or a private local/Render recovery shell; API-key mode is the automation alternative.
+**Decision:** the operator completes Codex device auth once through the deployment dashboard or a private local/hosted recovery shell; API-key mode is the automation alternative.
 
 **Why:** the dashboard starts the supported device-code protocol and polls server-authored state; it does not invent an OAuth callback. Codex SDK wraps the CLI and uses local credential/session state under `CODEX_HOME`. The starter should represent this accurately.
 
@@ -46,11 +46,11 @@
 
 **Why:** preserves the starter’s teachability and one-service deployment while durable jobs make later worker separation possible.
 
-**Rejected:** multiple Render services, Redis, and distributed workers in v1.
+**Rejected:** multiple services, Redis, and distributed workers in v1.
 
 ## ADR-007 — Persistent disk for Codex state and workspaces
 
-**Decision:** mount one Render disk and set `CODEX_HOME` plus workspace root under it.
+**Decision:** mount one persistent volume and set `CODEX_HOME` plus workspace root under it.
 
 **Why:** ChatGPT credentials and Codex sessions must survive restart; workspaces may contain task artifacts.
 
@@ -104,7 +104,7 @@
 
 ## ADR-016 — Store the single owner identity through dashboard onboarding
 
-**Decision:** new Render Blueprints never ask for the owner phone. The dashboard accepts one E.164 personal phone through a same-origin-protected route. PostgreSQL `channel_identities` is the authorization authority: the phone is encrypted, fingerprinted per deployment, and returned only as a mask. Replacing it activates the new identity and revokes prior owner-phone identities transactionally. Photon resolves this database owner once per setup attempt; its separately assigned line remains the destination shown at completion. ADR-018 keeps the phone in dashboard onboarding instead of fresh-deployment environment configuration.
+**Decision:** new deployments configure the owner phone only in the dashboard. The dashboard accepts one E.164 personal phone through a same-origin-protected route. PostgreSQL `channel_identities` is the authorization authority: the phone is encrypted, fingerprinted per deployment, and returned only as a mask. Replacing it activates the new identity and revokes prior owner-phone identities transactionally. Photon resolves this database owner once per setup attempt; its separately assigned line remains the destination shown at completion. ADR-018 keeps the phone in dashboard onboarding instead of fresh-deployment environment configuration.
 
 Existing deployments first prefer an active database owner, then import `OWNER_PHONE_NUMBER`, the former long Render alias, or one unambiguous E.164 `AGENT_OWNER_HANDLES` value. Stored Photon metadata is never imported as authorization. Ambiguous handles require explicit dashboard recovery, and old environment values remain until an operator removes them after verification.
 
@@ -114,26 +114,26 @@ Existing deployments first prefer an active database owner, then import `OWNER_P
 
 ## ADR-018 — Keep onboarding values out of the deployment environment
 
-**Decision:** new Blueprints prompt for zero user-supplied environment values.
+**Decision:** deployment configuration contains infrastructure values (`DATABASE_URL`, an explicit stable `DEPLOYMENT_ID`, and `APP_ENCRYPTION_KEY`); onboarding values stay in the dashboard.
 Startup rejects the obsolete `AGENT_PASSWORD` and `DASHBOARD_SETUP_SECRET`
 keys so they cannot silently become active again. The owner phone remains
-dashboard-managed and persisted through `channel_identities`; the Blueprint
-does not ask for it. Setup mutations require a matching `Origin` and reject
+dashboard-managed and persisted through `channel_identities`; deployment
+configuration does not ask for it. Setup mutations require a matching `Origin` and reject
 cross-site fetch metadata.
 
-**Why:** this keeps Blueprint deployment free of manually supplied onboarding
+**Why:** this keeps deployment configuration free of manually supplied onboarding
 values while preserving PostgreSQL as the owner-authorization authority and
 the dashboard as the owner, Photon, and ChatGPT setup flow.
 
 **Rejected for this release:** adding dashboard credential values to the
-deployment environment, moving the owner phone back into the Blueprint, or
+deployment environment, moving the owner phone back into deployment configuration, or
 using stored provider metadata as sender authorization.
 
 ## ADR-019 — Default dashboard phone entry to the United States
 
 **Decision:** keep the owner identity canonical as strict E.164, but make the dashboard input boundary U.S.-first. The default form adds the `+1` country code to a valid U.S. national number. A link-style **Not in the U.S.?** disclosure exposes a native country selector; selected-country national input and complete international input are accepted only when they identify a valid number for that country. The server performs normalization and country validation before the existing identity controller persists or provisions the owner.
 
-The owner setup route accepts exact `{ countryCode, phoneNumber }` dashboard JSON and retains the former exact `{ phoneNumber }` E.164 shape for compatibility. Existing environment migration inputs remain strict E.164. No browser locale, IP geolocation, database migration, readiness change, or Blueprint prompt is introduced.
+The owner setup route accepts exact `{ countryCode, phoneNumber }` dashboard JSON and retains the former exact `{ phoneNumber }` E.164 shape for compatibility. Existing environment migration inputs remain strict E.164. No browser locale, IP geolocation, database migration, readiness change, or deployment prompt is introduced.
 
 **Why:** the product assumes most deployers are in the United States, so requiring them to understand or type `+1` adds avoidable onboarding friction. Keeping validation server-side preserves the authorization, masking, replacement, and Photon contracts while still giving international owners an explicit path.
 

@@ -39,7 +39,7 @@ Production-oriented private iMessage agent starter. Keep every module justified 
 | Codex runtime | `src/agent/*`, model/capability config, fake CLI fixtures |
 | Supermemory | `src/memory/*`, memory prompt/isolation tests |
 | Security | `src/security/*`, security tests, threat model |
-| Deploy/docs | `render.yaml`, setup docs, health HTTP composition |
+| Deploy/docs | `Dockerfile`, setup docs, health HTTP composition |
 
 - Shared contract changes require a focused integration PR or prior coordination.
 
@@ -75,7 +75,7 @@ Production-oriented private iMessage agent starter. Keep every module justified 
 npm run typecheck
 npm test
 npm run test:integration
-npm run render:validate   # when deployment files change
+npm run docs:check
 git diff --check
 ```
 

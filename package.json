@@ -21,8 +21,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "codex:login": "codex login --device-auth",
-    "codex:status": "codex login status",
-    "render:validate": "render blueprints validate render.yaml"
+    "codex:status": "codex login status"
   },
   "dependencies": {
     "@openai/codex": "0.147.0",

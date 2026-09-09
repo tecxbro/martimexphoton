@@ -12,7 +12,7 @@ Use the narrowest change that matches the desired behavior. Prompt and configura
 | Models and reasoning effort | **Advanced** in the deployment dashboard |
 | Who can message the agent | `AGENT_OWNER_HANDLES` |
 | Semantic memory | `SUPERMEMORY_API_KEY` |
-| Render region, plan, and disk | `render.yaml` |
+| Hosting resources and persistent volume | Hosting environment; [deployment guide](./DEPLOYMENT.md) |
 | Concurrency and runtime limits | `.env` |
 | Add tools or capabilities | `src/runtime/production-bootstrap.ts` and the capability provider |
 
@@ -29,7 +29,7 @@ Prompts are versioned, hashed Markdown with structured output schemas. Preserve 
 
 Edit `prompts/execution.system.md` for bounded task-execution instructions. Execution agents cannot message the user, approve their own action, broaden permissions, or receive unrelated secrets.
 
-The default Render deployment has no code-owned workspace capability on a blank disk, so conversational turns can answer directly but repository execution is unavailable. Adding execution requires an explicit workspace binding and capability provider in `src/runtime/production-bootstrap.ts`. Define its authorization, sandbox, network, recovery, and test contract before enabling it.
+The default deployment has no code-owned workspace capability on a blank disk, so conversational turns can answer directly but repository execution is unavailable. Adding execution requires an explicit workspace binding and capability provider in `src/runtime/production-bootstrap.ts`. Define its authorization, sandbox, network, recovery, and test contract before enabling it.
 
 ## Approval policy
 
@@ -61,9 +61,9 @@ Set `SUPERMEMORY_API_KEY` to enable the optional memory provider, or leave it bl
 
 Memory must remain deployment/owner scoped, bounded in count and size, and limited to curated durable facts or summaries. Do not upload raw message history or move authorization, queue, approval, or delivery state out of PostgreSQL.
 
-## Render resources
+## Hosting resources
 
-Edit `render.yaml` to change region, plans, or disk size. Confirm every plan name and field against the current Render Blueprint schema and run `npm run render:validate` in an authenticated Render workspace.
+Configure compute, region, PostgreSQL, and persistent volume capacity through your hosting environment. Keep storage mounted at `/data`, with `CODEX_HOME=/data/codex` and `AGENT_WORKSPACE_ROOT=/data/workspaces`. Preserve `DEPLOYMENT_ID` and `APP_ENCRYPTION_KEY` across changes. See [Deployment](./DEPLOYMENT.md).
 
 The attached disk makes the Web Service single-instance. Horizontal scaling requires a separate architecture decision for credentials, workspaces, intake ownership, and failover.
 

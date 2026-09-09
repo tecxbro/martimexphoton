@@ -2,9 +2,7 @@
 
 Deploy a private iMessage agent powered by Photon Spectrum, Codex, PostgreSQL, and optional Supermemory.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tecxbro/iMessage-agent-render)
-
-> This provisions a paid Render Web Service, a Render PostgreSQL database, and a persistent disk. The deployed web URL opens the setup dashboard. You talk to the agent through iMessage.
+Deploy the included [Dockerfile](./Dockerfile) with PostgreSQL and a persistent volume. Follow the [deployment guide](./docs/DEPLOYMENT.md) to configure the service. The deployed web URL opens the setup dashboard; you talk to the agent through iMessage.
 
 ## Before you deploy
 
@@ -15,23 +13,23 @@ You need:
 - either a ChatGPT account with Codex device login enabled or an OpenAI API key; and
 - an optional Supermemory API key if you want semantic memory.
 
-Review current Render pricing before deploying. The Blueprint creates paid resources and intentionally keeps the Web Service at one instance because its Codex credentials and workspaces live on an attached disk.
+Keep the service at one instance because its Codex credentials and workspaces live on an attached volume.
 
 ## Deploy in four steps
 
-1. Click **Deploy to Render** above.
-2. Open the deployed agent URL. The Blueprint does not ask for any user-supplied environment value.
-3. In the dashboard, enter your personal phone number, authenticate Photon, then connect ChatGPT. If you choose API-key mode instead, set `CODEX_AUTH_MODE=api_key` and add `OPENAI_API_KEY` as a Render secret.
+1. Build the included Dockerfile and provision one service, PostgreSQL, and a persistent volume mounted at `/data`.
+2. Configure `DATABASE_URL`, an explicit stable `DEPLOYMENT_ID`, and `APP_ENCRYPTION_KEY` using the [deployment guide](./docs/DEPLOYMENT.md), then deploy and open the agent URL. For an existing deployment, capture and preserve its UUID before upgrading.
+3. In the dashboard, enter your personal phone number, authenticate Photon, then connect ChatGPT. If you choose API-key mode instead, set `CODEX_AUTH_MODE=api_key` and add `OPENAI_API_KEY` as a service secret.
 4. Confirm `/readyz` returns HTTP 200, then text the Photon-assigned number shown at completion from the configured owner phone.
 
-Render keeps auto-deploys off for template-created services. Deploy reviewed updates manually so a push to the original template cannot redeploy every user's copy.
+Deploy reviewed updates from your own checkout and control rollout through your hosting environment.
 
 ## Dashboard and owner setup
 
 Dashboard setup requests require a same-origin browser request and reject
 cross-site fetch metadata.
 
-The dashboard collects the owner's phone number before Photon setup. U.S. entry is the default, so the owner can type a normal 10-digit number without `+1`; **Not in the U.S.?** reveals a country selector, and international users may enter a national or complete international number. The server validates the selected country and normalizes the value to E.164 before storage. The phone number is not a Blueprint prompt and is not required in the environment. It is encrypted and fingerprinted in PostgreSQL, becomes the only iMessage sender authorized to use the agent, and is registered during Photon owner provisioning. The different Photon-assigned number shown at completion is the destination the owner texts. Replacing the owner number in the dashboard revokes the previous owner identity before the new identity can authorize messages.
+The dashboard collects the owner's phone number before Photon setup. U.S. entry is the default, so the owner can type a normal 10-digit number without `+1`; **Not in the U.S.?** reveals a country selector, and international users may enter a national or complete international number. The server validates the selected country and normalizes the value to E.164 before storage. The phone number is not a deployment environment value and is not required in the environment. It is encrypted and fingerprinted in PostgreSQL, becomes the only iMessage sender authorized to use the agent, and is registered during Photon owner provisioning. The different Photon-assigned number shown at completion is the destination the owner texts. Replacing the owner number in the dashboard revokes the previous owner identity before the new identity can authorize messages.
 
 ## Finish Codex authentication
 
@@ -51,7 +49,7 @@ unavailable, the agent uses Codex's advertised default pair without changing
 the stored preference, and Advanced explains the fallback. Saved changes apply
 to new message chains; running work keeps its chain snapshot.
 
-ChatGPT credentials persist under `/var/data/codex`. Treat `auth.json` like a password: never print it, copy it into a ticket, or commit it.
+ChatGPT credentials persist under `/data/codex`. Treat `auth.json` like a password: never print it, copy it into a ticket, or commit it.
 
 ### OpenAI API key
 
@@ -59,14 +57,14 @@ Set these Web Service environment variables and redeploy:
 
 ```dotenv
 CODEX_AUTH_MODE=api_key
-OPENAI_API_KEY=replace-with-a-Render-secret
+OPENAI_API_KEY=replace-with-a-service-secret
 ```
 
 API-key mode does not require device login. The runtime supplies the key only to the Codex child process through an explicit environment allowlist.
 
 ## Verify the deployment
 
-Open the Render service URL or check the endpoints directly:
+Open the service URL or check the endpoints directly:
 
 ```bash
 curl --fail --silent "https://<service-host>/healthz"
@@ -97,17 +95,17 @@ Record protected live evidence before describing any provider path as live-worki
 
 ## What gets deployed
 
-The checked-in [`render.yaml`](./render.yaml) creates:
+Provision the following resources for the included Dockerfile:
 
-- one paid Node Web Service in Oregon on the Starter plan;
-- one Render PostgreSQL 18 database on the Basic 256 MB plan;
-- one 1 GB persistent disk mounted at `/var/data`;
-- `/var/data/codex` for Codex credentials and sessions;
-- `/var/data/workspaces` for agent workspaces;
-- a generated application encryption key;
-- a dynamic `DATABASE_URL` from the attached database;
-- `npm run db:migrate` before each deploy; and
-- `/healthz` as Render's liveness check.
+- one long-running service instance;
+- one PostgreSQL database (13 or newer);
+- one persistent volume mounted at `/data`;
+- `/data/codex` for Codex credentials and sessions;
+- `/data/workspaces` for agent workspaces;
+- a stable explicit `DEPLOYMENT_ID` and application encryption key;
+- `DATABASE_URL` configured as a service secret;
+- checked-in migrations applied by the startup lifecycle (`npm run db:migrate` is also available as a release command); and
+- `/healthz` as the service's liveness check.
 
 The disk makes this version single-instance. Do not enable horizontal scaling without redesigning credential and workspace ownership.
 
@@ -123,7 +121,7 @@ The most common edits are:
 | Models and reasoning effort | **Advanced** in the deployment dashboard |
 | Authorized sender | **Change phone number** in the deployment dashboard; owner environment values are migration inputs only |
 | Semantic memory | `SUPERMEMORY_API_KEY` |
-| Render region, plans, and disk | `render.yaml` |
+| Hosting resources and persistent volume | Hosting environment; [deployment guide](./docs/DEPLOYMENT.md) |
 | Concurrency and runtime limits | `.env` |
 | Tools or repository workspaces | `src/runtime/production-bootstrap.ts` capability composition |
 
@@ -142,15 +140,16 @@ See [Customization](./docs/CUSTOMIZATION.md) before editing the runtime composit
 ### Install and start
 
 ```bash
-git clone https://github.com/tecxbro/iMessage-agent-render.git
-cd iMessage-agent-render
+git clone https://github.com/tecxbro/martimexphoton.git
+cd martimexphoton
 npm ci
 cp .env.example .env
 ```
 
-Edit `.env`, then generate an `APP_ENCRYPTION_KEY`:
+For a new local deployment, generate a UUID and encryption key, then set them as `DEPLOYMENT_ID` and `APP_ENCRYPTION_KEY` in `.env`:
 
 ```bash
+node -e 'console.log(require("node:crypto").randomUUID())'
 openssl rand -base64 32
 ```
 
@@ -216,13 +215,13 @@ Never commit `.env`, `auth.json`, provider credentials, database URLs, owner han
 
 ## Known limitations and release evidence
 
-The executable production runtime is composed. Clean-account Render deployment and protected live-provider evidence remain separate release checks.
+The executable production runtime is composed. Clean deployment and protected live-provider evidence remain separate release checks.
 
-The repository does not currently include recorded evidence for a fresh Render deployment, live Photon/Spectrum authorized DM, authenticated Codex restart/resume, or live Supermemory add/search/delete cycle. Run the [release smoke checklist](./test/e2e/render-smoke.md) for the exact commit under review.
+The repository does not currently include recorded evidence for a fresh deployment, live Photon/Spectrum authorized DM, authenticated Codex restart/resume, or live Supermemory add/search/delete cycle. Run the [release smoke checklist](./test/e2e/render-smoke.md) for the exact commit under review.
 
 The pinned Spectrum API sends through native `space.send(...)` but does not accept the database's stable client GUID. PostgreSQL prevents normal resend, but a crash after provider acknowledgement and before cursor checkpoint can duplicate one bubble. Do not claim exactly-once provider delivery without protected live evidence and provider support.
 
-A blank Render disk has no code-owned execution workspace capability. The default template can answer conversational turns; repository execution requires an explicit reviewed workspace/capability binding.
+A blank persistent volume has no code-owned execution workspace capability. The default template can answer conversational turns; repository execution requires an explicit reviewed workspace/capability binding.
 
 ## Documentation
 

@@ -2,7 +2,7 @@
 
 [`../.env.example`](../.env.example) is the copyable configuration template. This file is the authoritative explanation of supported environment variables, including private service secrets. The service validates the complete environment at startup and reports safe configuration problems together.
 
-All changes require a service restart. Render-managed values should be changed through the Blueprint or Web Service environment settings, never by editing files on the persistent disk.
+All changes require a service restart. Hosting-managed values should be changed through the service environment settings, never by editing files on the persistent disk.
 
 ## Required provider configuration
 
@@ -10,9 +10,9 @@ All changes require a service restart. Render-managed values should be changed t
 |---|---:|---|---|---:|---:|
 | `SPECTRUM_PROJECT_ID` | Yes | — | Photon dashboard | Yes | Yes |
 | `SPECTRUM_PROJECT_SECRET` | Yes | — | Photon dashboard | Yes | Yes |
-| `DATABASE_URL` | Yes | — | Local PostgreSQL or Render dynamic database reference | Yes | Yes |
+| `DATABASE_URL` | Yes | — | Your PostgreSQL service | Yes | Yes |
 
-`DATABASE_URL` must use the `postgres://` or `postgresql://` protocol. On Render it is supplied automatically from `imessage-agent-db`; do not paste it into a Blueprint prompt.
+`DATABASE_URL` must use the `postgres://` or `postgresql://` protocol. Supply it as a service secret.
 
 ## Authorization
 
@@ -24,7 +24,7 @@ All changes require a service restart. Render-managed values should be changed t
 | `PAIRING_MODE` | No | `off` | Operator policy | Yes | No |
 | `GROUP_MODE` | No | `owner_mentions_only` | Operator policy | Yes | No |
 
-Fresh deployments leave every owner variable unset and save the owner through the deployment dashboard. The dashboard defaults to U.S. national entry and supports country-aware international entry, then normalizes a valid number to E.164 before persistence. The Render Blueprint never asks for a phone number. Startup first prefers an active encrypted database identity. Only when none exists does it import `OWNER_PHONE_NUMBER`, then the former long Render alias, then a single unambiguous E.164 `AGENT_OWNER_HANDLES` value. These legacy environment inputs remain strict E.164 migration values; conflicting phone variables are rejected, and multiple handles or a non-phone handle produce a stable migration-required state instead of a silent choice.
+Fresh deployments leave every owner variable unset and save the owner through the deployment dashboard. The dashboard defaults to U.S. national entry and supports country-aware international entry, then normalizes a valid number to E.164 before persistence. Startup first prefers an active encrypted database identity. Only when none exists does it import `OWNER_PHONE_NUMBER`, then the former long Render alias, then a single unambiguous E.164 `AGENT_OWNER_HANDLES` value. These legacy environment inputs remain strict E.164 migration values; conflicting phone variables are rejected, and multiple handles or a non-phone handle produce a stable migration-required state instead of a silent choice.
 
 Imported values are one-time inputs: successful import persists the encrypted identity and later restarts do not overwrite it from the environment. Stored Photon owner metadata is provider setup state, never sender-authorization authority. After the masked dashboard status and an authorized message verify migration, remove old environment values manually if desired.
 
@@ -32,7 +32,7 @@ Keep `PAIRING_MODE=off` unless pairing has been explicitly reviewed for the depl
 
 ## Dashboard onboarding
 
-Fresh Blueprint deployment prompts for zero user-supplied environment values. The former dashboard credential variables are unsupported and startup rejects them if they are still present, including when set to an empty string. Existing services must delete those two legacy variables in Render before deploying this version; see [Troubleshooting](./TROUBLESHOOTING.md).
+Configure the infrastructure variables below before deploying; owner, Photon, and ChatGPT enrollment stay in the dashboard. The former dashboard credential variables are unsupported and startup rejects them if they are still present, including when set to an empty string. Existing services must delete those two legacy variables from the service environment before deploying this version; see [Troubleshooting](./TROUBLESHOOTING.md).
 
 Owner, Photon, and ChatGPT setup are managed from the dashboard. Mutations
 require a matching `Origin` and reject cross-site fetch metadata.
@@ -50,16 +50,18 @@ ChatGPT mode stores device-login credentials below `CODEX_HOME`. API-key mode su
 
 | Variable | Required | Default | Where to obtain it | Restart required | Sensitive |
 |---|---:|---|---|---:|---:|
-| `DEPLOYMENT_ID` | Local only | Derived from `RENDER_SERVICE_ID` on Render | Generate a stable UUID locally | Yes | No |
-| `APP_ENCRYPTION_KEY` | Yes | Render generates it | `openssl rand -base64 32` locally | Yes | Yes |
-| `CODEX_HOME` | Yes | `/var/data/codex` on Render | Absolute private directory | Yes | Contains secrets |
-| `AGENT_WORKSPACE_ROOT` | Yes | `/var/data/workspaces` on Render | Separate absolute directory | Yes | Private data |
+| `DEPLOYMENT_ID` | Yes | — | New deployment: generate a UUID; existing deployment: preserve the captured UUID | Yes | No |
+| `APP_ENCRYPTION_KEY` | Yes | — | New deployment: `openssl rand -base64 32`; existing deployment: preserve its key | Yes | Yes |
+| `CODEX_HOME` | Yes | `/data/codex` in Docker | Absolute private directory | Yes | Contains secrets |
+| `AGENT_WORKSPACE_ROOT` | Yes | `/data/workspaces` in Docker | Separate absolute directory | Yes | Private data |
 
 `APP_ENCRYPTION_KEY` must be 32 bytes encoded as base64 or 64 hexadecimal characters. Rotating it requires a migration plan for already encrypted data.
 
 `CODEX_HOME` and `AGENT_WORKSPACE_ROOT` must be absolute, non-root, separate, and non-overlapping. `.env` does not expand `$HOME`, `$PWD`, `~`, or command substitutions.
 
-Render service IDs are provider-specific strings, not UUIDs. When `DEPLOYMENT_ID` is absent on Render, the loader hashes `RENDER_SERVICE_ID` into a deterministic UUID. This keeps the internal deployment namespace stable without storing the raw provider identifier in memory namespaces.
+Configure an explicit `DEPLOYMENT_ID` UUID in every environment. Before upgrading an existing deployment, [capture its effective UUID](./DEPLOYMENT.md#preserve-an-existing-deployment-uuid) and preserve it across host moves and restarts so database and memory namespaces remain unchanged.
+
+Migration status: removal of the legacy `RENDER_SERVICE_ID` fallback is pending capture of the existing deployment UUID. Until that prerequisite is complete, the loader still derives a UUID when the explicit value is missing or blank and the legacy service ID is set. Without that fallback input, missing or blank UUIDs fail validation; malformed explicit UUIDs always fail. New deployments should supply only the explicit UUID.
 
 ## Optional memory
 
@@ -102,7 +104,7 @@ only after the exact pair passes the bounded Codex capability probe.
 
 `0` starts processing immediately and is the production default. A non-zero value batches messages sent within the configured window but adds the same amount of guaranteed latency before processing begins.
 
-These bounds protect provider load and child-process capacity. Increasing them changes resource and abuse risk; validate queue recovery, cancellation, and Render capacity before deployment.
+These bounds protect provider load and child-process capacity. Increasing them changes resource and abuse risk; validate queue recovery, cancellation, and service capacity before deployment.
 
 ## Retention and logging
 
@@ -118,9 +120,9 @@ Keep `LOG_MESSAGE_CONTENT=false` in production. Enabling raw content logging mat
 
 | Variable | Required | Default | Where to obtain it | Restart required | Sensitive |
 |---|---:|---:|---|---:|---:|
-| `PORT` | No | `10000` | Render injects or operator chooses | Yes | No |
+| `PORT` | No | `10000` | Host injects or operator chooses | Yes | No |
 
-`PORT` must be between 1 and 65535. `NODE_ENV`, `PATH`, locale variables, and `RENDER_SERVICE_ID` are runtime/platform inputs rather than template-user configuration and are intentionally not copied into `.env.example`.
+`PORT` must be between 1 and 65535. `NODE_ENV`, `PATH`, and locale variables are runtime/platform inputs rather than template-user configuration and are intentionally not copied into `.env.example`.
 
 ## Cross-field safety checks
 

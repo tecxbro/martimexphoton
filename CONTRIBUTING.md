@@ -27,7 +27,7 @@ Shared contracts, database migrations, prompt schemas, provider boundaries, and 
 
 User deployment, configuration, customization, troubleshooting, architecture, security, and operations guides live under `docs/`. Product requirements, implementation history, test plans, decisions, and provider research live under `docs/maintainers/`.
 
-Run `npm run docs:check` after moving a file, changing an npm command, adding a public environment variable, editing `render.yaml`, or changing a production entrypoint.
+Run `npm run docs:check` after moving a file, changing an npm command, adding a public environment variable, editing `Dockerfile`, or changing a production entrypoint.
 
 ## Required checks
 
@@ -43,9 +43,9 @@ npm run build
 git diff --check
 ```
 
-When deployment files change, also run `npm run render:validate` in an authenticated Render workspace. Database-backed integration tests require a separate disposable database and must not silently count skipped tests as PostgreSQL evidence.
+Database-backed integration tests require a separate disposable database and must not silently count skipped tests as PostgreSQL evidence.
 
-Protected Photon, Codex, Render, and Supermemory tests require authorized accounts and recipients. Report offline, skipped, blocked, and live evidence separately; never claim a provider path works live unless that path was exercised.
+Protected deployment, Photon, Codex, and Supermemory tests require authorized accounts and recipients. Report offline, skipped, blocked, and live evidence separately; never claim a provider path works live unless that path was exercised.
 
 ## Commits and pull requests
 

@@ -123,7 +123,7 @@ Explicitly exclude:
 - Supermemory key
 - application encryption keys
 - unrelated cloud tokens
-- Render management credentials
+- Hosting management credentials
 
 ### Filesystem
 
@@ -196,10 +196,10 @@ The starter must document that prompt injection cannot be “solved” purely wi
 | Secret | Storage |
 |---|---|
 | Photon management token/project ID/Spectrum secret | Encrypted durable installation record in PostgreSQL; legacy disk credentials are read-only import input |
-| Supermemory API key | Render secret environment |
-| Database URL | Render dynamic secret reference |
-| App encryption key | Generated Render secret environment |
-| OpenAI API key | Render secret environment, API-key mode only |
+| Supermemory API key | service secret environment |
+| Database URL | Service database secret |
+| App encryption key | Generated service secret environment |
+| OpenAI API key | service secret environment, API-key mode only |
 | ChatGPT/Codex credentials | `$CODEX_HOME/auth.json` on attached disk |
 
 Never store secrets in Supermemory or source control. Avoid copying secrets into job payloads or failure events.
@@ -212,7 +212,7 @@ Never store secrets in Supermemory or source control. Avoid copying secrets into
 - Retain raw content for 30 days by default.
 - Store candidate bodies encrypted in PostgreSQL and only curated durable information in Supermemory.
 - Provide inspect/delete commands.
-- Document third-party data processing by Photon, OpenAI, Render, and Supermemory.
+- Document third-party data processing by Photon, OpenAI, the hosting provider, and Supermemory.
 - Do not claim end-to-end encryption beyond what each provider actually guarantees.
 
 ## 15. Logging and diagnostics
@@ -248,7 +248,7 @@ No device code, verification URL, raw message, prompt, full command output, hand
 | Model changes an approved payload | executor receives only the immutable stored payload; no post-approval model call |
 | Worker crashes mid-send | stable client GUID + persisted cursor |
 | Memory returns another user’s fact | owner container isolation + integration test |
-| Render disk snapshot leaked | revoke Codex auth, rotate secrets, re-enroll |
+| Persistent volume snapshot leaked | revoke Codex auth, rotate secrets, re-enroll |
 | Supermemory outage | no operational dependency; proceed without recall |
 | Database outage | stop untracked execution and mark not ready |
 

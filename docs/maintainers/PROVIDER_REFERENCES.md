@@ -9,7 +9,7 @@ Use the Markdown/LLM-friendly sources first. When a provider does not expose a s
 - LLM-oriented implementation index: [`docs/llms.txt`](../llms.txt)
 - Deployment and authentication: [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md)
 - Operations and rollback: [`docs/OPERATIONS.md`](../OPERATIONS.md)
-- Clean local/Render evidence checklist: [`test/e2e/render-smoke.md`](../../test/e2e/render-smoke.md)
+- Clean local/hosted evidence checklist: [`test/e2e/render-smoke.md`](../../test/e2e/render-smoke.md)
 
 The local index distinguishes implemented modules, intended contracts, and protected/live evidence. Do not infer provider success from an offline test.
 
@@ -96,18 +96,9 @@ Topics:
 - Hybrid search.
 - Convex and Codex integration notes where relevant.
 
-## 5. Render
+## 5. Hosting
 
-- Documentation index: <https://render.com/docs/llms.txt>
-- Blueprint specification: <https://render.com/docs/blueprint-spec>
-- Deploy to Render: <https://render.com/docs/deploy-to-render>
-- Environment variables: <https://render.com/docs/configure-environment-variables>
-- PostgreSQL: <https://render.com/docs/postgresql-creating-connecting>
-- Persistent disks: <https://render.com/docs/disks>
-- Health checks: <https://render.com/docs/health-checks>
-- Web services: <https://render.com/docs/web-services>
-
-Verify current Blueprint plan names and validate `render.yaml` in CI.
+The application requires a long-running container, PostgreSQL, and persistent storage. Use the included [Dockerfile](../../Dockerfile) and [deployment guide](../DEPLOYMENT.md); consult your host's documentation for volume attachment, service secrets, ports, and shutdown behavior.
 
 ## 6. PostgreSQL, Drizzle, and pg-boss
 
@@ -159,6 +150,6 @@ Before each public release:
 1. Re-fetch every `llms.txt` index.
 2. Recheck pinned package requirements and breaking changes.
 3. Re-run model/effort capability probes.
-4. Validate Render Blueprint fields and plan names.
+4. Verify the container build, service configuration, and persistent storage paths.
 5. Update the “last verified” date and release notes.
 6. Do not leave a dead link silently; replace it with the current official source and explain the change.

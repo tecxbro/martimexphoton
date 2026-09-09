@@ -4,7 +4,7 @@ Use this index to find the shortest guide for the task at hand.
 
 ## Start here
 
-- [Deploy the agent](./DEPLOYMENT.md) — create the Render resources, authenticate Codex, and send the first iMessage.
+- [Deploy the agent](./DEPLOYMENT.md) — provision the container, PostgreSQL, and persistent volume, authenticate Codex, and send the first iMessage.
 - [Configure the agent](./CONFIGURATION.md) — authoritative environment-variable reference.
 - [Customize its behavior](./CUSTOMIZATION.md) — change prompts, models, authorization, memory, limits, or capabilities.
 - [Troubleshoot a deployment](./TROUBLESHOOTING.md) — symptom-based safe diagnostics.
@@ -24,4 +24,4 @@ Use this index to find the shortest guide for the task at hand.
 - [Architecture decisions](./maintainers/DECISIONS.md)
 - [Provider references](./maintainers/PROVIDER_REFERENCES.md)
 
-The executable production runtime is composed. A clean-account Render deployment and protected live-provider evidence must still be recorded for each release under review.
+The executable production runtime is composed. A clean deployment and protected live-provider evidence must still be recorded for each release under review.

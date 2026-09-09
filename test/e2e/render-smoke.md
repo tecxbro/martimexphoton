@@ -1,4 +1,4 @@
-# Clean Local and Render Release Smoke
+# Clean Local and Hosted Release Smoke
 
 Use this file as an evidence record, not as a statement that a check passed. Mark every row `PASS`, `FAIL`, `BLOCKED`, or `NOT RUN`, then attach redacted output. Never store secrets, auth files, owner handles, raw messages, database URLs, or full provider errors here.
 
@@ -12,12 +12,13 @@ Use this file as an evidence record, not as a statement that a check passed. Mar
 | Branch/tag | |
 | Node/npm versions | |
 | PostgreSQL version | |
-| Render CLI version/workspace | |
-| Render deploy ID | |
+| Hosting environment | |
+| Hosting release ID | |
+| Captured deployment UUID (existing deployments) | |
 
 ## Runtime status and evidence boundary
 
-The executable production runtime is composed. `npm start` executes `dist/server.js`, built from `src/server.ts`, which loads `createProductionRuntime()` and starts the PostgreSQL, queue, Codex, optional memory, worker, reconciliation, authorization, and Spectrum lifecycle. Clean-account Render deployment and protected live-provider evidence remain separate release checks and must stay blank, `BLOCKED`, or `NOT RUN` until exercised.
+The executable production runtime is composed. `npm start` executes `dist/server.js`, built from `src/server.ts`, which loads `createProductionRuntime()` and starts the PostgreSQL, queue, Codex, optional memory, worker, reconciliation, authorization, and Spectrum lifecycle. Clean deployment and protected live-provider evidence remain separate release checks and must stay blank, `BLOCKED`, or `NOT RUN` until exercised.
 
 ## A. Offline preflight
 
@@ -38,11 +39,11 @@ Database integration tests require a disposable database and truncate applicatio
 POSTGRES_PIPELINE_TEST_DATABASE_URL=postgresql://<test-user>:<test-password>@127.0.0.1:5432/<disposable-test-db> npm run test:integration
 ```
 
-Blueprint validation requires an authenticated/default Render workspace:
+Validate documentation and the application build:
 
 ```bash
-render workspace set
-npm run render:validate
+npm run docs:check
+npm run build
 ```
 
 | Check | Status | Evidence/notes |
@@ -53,10 +54,8 @@ npm run render:validate
 | Database integration tests (not skipped) | | |
 | Chaos suite | | |
 | `git diff --check` | | |
-| Render Blueprint validation | | |
+| Documentation and build | | |
 | Secret scan | | |
-
-If Render CLI reports `no workspace specified and no default workspace set`, mark Blueprint validation `BLOCKED`; the YAML has not been validated.
 
 ## B. Clean local install
 
@@ -85,34 +84,35 @@ curl --silent --show-error http://127.0.0.1:10000/readyz
 
 `/readyz` may return HTTP 503 during incomplete setup or a dependency outage. Record the returned redacted component state; do not pre-mark ready-state or message checks based on code composition alone.
 
-## C. Clean Render Blueprint
+## C. Clean container deployment
 
-Create the Blueprint in a fresh Render workspace from the exact commit above.
+Deploy the Dockerfile from the exact commit above with PostgreSQL and a persistent volume, following the deployment guide.
 
 | Check | Expected | Status | Evidence/notes |
 |---|---|---|---|
 | Resource count | one Web Service, one Postgres database | | |
-| Web plan/instances | paid service, exactly one instance | | |
-| Disk | one disk at `/var/data` | | |
-| Codex path | `CODEX_HOME=/var/data/codex` | | |
-| Workspace path | `AGENT_WORKSPACE_ROOT=/var/data/workspaces` | | |
-| Database wiring | `DATABASE_URL` dynamic reference; no manual URL | | |
-| User-supplied prompts | none; onboarding remains in the dashboard | | |
-| Generated values | application encryption material | | |
-| Build | `npm ci --include=dev && npm run build` exits 0 | | |
-| Pre-deploy | `npm run db:migrate` exits 0 | | |
-| Start | `npm start` binds Render `PORT` | | |
+| Web plan/instances | exactly one long-running instance | | |
+| Disk | one disk at `/data` | | |
+| Codex path | `CODEX_HOME=/data/codex` | | |
+| Workspace path | `AGENT_WORKSPACE_ROOT=/data/workspaces` | | |
+| Database wiring | `DATABASE_URL` configured as a service secret | | |
+| Deployment identity | explicit stable `DEPLOYMENT_ID`; captured UUID preserved on upgrades | | |
+| Onboarding | owner, Photon, and ChatGPT configured in the dashboard | | |
+| Encryption key | stable `APP_ENCRYPTION_KEY`; preserved on upgrades | | |
+| Build | `docker build -t imessage-codex-agent .` exits 0 | | |
+| Migrations | startup applies checked-in migrations; explicit `npm run db:migrate` also supported | | |
+| Start | `node dist/server.js` (same entrypoint as `npm start`) binds configured `PORT` | | |
 | Setup page | generated URL opens the dashboard and reports truthful readiness | | |
 | Liveness | external `/healthz` HTTP 200 | | |
 | Initial readiness | 503 only for expected missing auth/dependency | | |
 
-Do not record the Render deployment as cleanly functional until this exact production entrypoint reaches `/readyz` 200 and the protected first-message checks pass.
+Do not record the deployment as cleanly functional until this exact production entrypoint reaches `/readyz` 200 and the protected first-message checks pass.
 
 ## D. Codex enrollment and restart persistence
 
 ### ChatGPT mode
 
-In private Render Shell:
+In the private service shell:
 
 ```bash
 npm run codex:login
@@ -125,7 +125,7 @@ Restart/redeploy, then rerun `npm run codex:status` and inspect `/readyz`. Devic
 
 ### API-key mode
 
-Add `OPENAI_API_KEY` as a Render secret, set `CODEX_AUTH_MODE=api_key`, restart, and run the protected capability probe. Do not run device login and do not print the key.
+Add `OPENAI_API_KEY` as a service secret, set `CODEX_AUTH_MODE=api_key`, restart, and run the protected capability probe. Do not run device login and do not print the key.
 
 | Check | Status | Evidence/notes |
 |---|---|---|
@@ -158,7 +158,7 @@ The dedicated memory-provider outage/Supermemory-timeout resilience exercise is 
 
 | Provider | Status | Exact test/evidence | Live claim allowed? |
 |---|---|---|---|
-| Render | | clean Blueprint/deploy/restart record | only if passed |
+| Hosting | | clean container/deploy/restart record | only if passed |
 | Photon/Spectrum | | protected authorized DM | only if passed |
 | Codex | | protected schema-bound run | only if passed |
 | Supermemory | | protected add/search/delete | only if passed |
@@ -190,7 +190,7 @@ Using the composed production entrypoint:
 
 1. Send an authorized turn that establishes a Codex thread and one non-sensitive durable preference.
 2. Record terminal chain/outbound state using safe IDs only.
-3. Restart the Render Web Service normally.
+3. Restart the service normally.
 4. Require `/healthz` and `/readyz` HTTP 200.
 5. Send a follow-up that requires prior context.
 6. Verify the persisted thread or bounded recovery summary is used, the memory remains owner-scoped, and no outbound part duplicates.
@@ -230,7 +230,7 @@ Using the composed production entrypoint:
 | Gate | Status | Reason/evidence |
 |---|---|---|
 | Clean local | | |
-| Clean Render | | |
+| Clean hosted deployment | | |
 | Restart recovery | | |
 | Every failure stage | | |
 | Security/secret boundary | | |
