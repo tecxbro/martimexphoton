@@ -3,6 +3,7 @@ import { type Server } from "node:http";
 import express, {
   type ErrorRequestHandler,
   type Express,
+  type RequestHandler,
   type Response,
 } from "express";
 
@@ -173,14 +174,10 @@ export function createHealthApplication(
     return { state: "not_connected" } as const;
   };
 
-  application.get("/", (_request, response) => {
-    response.set("cache-control", "no-store");
-    // Relative, so the page also works behind a proxy that serves this app
-    // under a path prefix.
-    response.redirect(302, "agent/dashboard");
-  });
-
-  application.get("/agent/dashboard", (_request, response) => {
+  // Serve the dashboard at the root too, not a redirect. A host proxy may
+  // serve this app under a path prefix and strip the trailing slash, so no
+  // redirect target resolves correctly for every host.
+  const sendDashboard: RequestHandler = (_request, response) => {
     setPrivateResponseHeaders(response);
     const snapshot = options.readiness.snapshot(options.spectrum?.snapshot());
     response.set(
@@ -205,7 +202,9 @@ export function createHealthApplication(
           chatGptStatus(),
         ),
       );
-  });
+  };
+  application.get("/", sendDashboard);
+  application.get("/agent/dashboard", sendDashboard);
 
   application.get("/agent/dashboard.js", (_request, response) => {
     response.set({
