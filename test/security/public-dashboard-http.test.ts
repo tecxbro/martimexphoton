@@ -82,6 +82,7 @@ async function startTestServer(input: {
   photon?: PhotonSetupController;
   chatgpt?: ChatGptSetupController;
   modelSettings?: ModelSettingsController;
+  trustedDashboardOrigins?: readonly string[];
 } = {}): Promise<string> {
   const readiness = new ReadinessRegistry();
   readiness.mark("disk", "ok");
@@ -96,6 +97,9 @@ async function startTestServer(input: {
     ...(input.modelSettings === undefined
       ? {}
       : { modelSettings: input.modelSettings }),
+    ...(input.trustedDashboardOrigins === undefined
+      ? {}
+      : { trustedDashboardOrigins: input.trustedDashboardOrigins }),
     deploymentPage: {
       authMode: "chatgpt",
       runtimeMode: "agent",
@@ -243,6 +247,41 @@ describe("public dashboard HTTP boundary", () => {
       state: "awaiting_authorization",
       userCode: "CHATGPT-DEVICE-CODE",
     });
+  });
+
+  it("accepts setup from an operator-trusted proxy origin and nothing broader", async () => {
+    const identity = configuredIdentity();
+    const configureOwner = vi.spyOn(identity, "configureOwner");
+    const proxyOrigin = "https://dashboard-proxy.example";
+    const base = await startTestServer({
+      identity,
+      trustedDashboardOrigins: [proxyOrigin],
+    });
+    const body = '{"countryCode":"GB","phoneNumber":"020 7183 8750"}';
+    const fromOrigin = (origin: string, fetchSite: string): RequestInit => ({
+      ...mutation(base, body),
+      headers: {
+        origin,
+        "content-type": "application/json",
+        "sec-fetch-site": fetchSite,
+      },
+    });
+
+    const trusted = await fetch(
+      `${base}/api/setup/owner`,
+      fromOrigin(proxyOrigin, "same-origin"),
+    );
+    expect(trusted.status).toBe(200);
+
+    const denials = await Promise.all([
+      fetch(`${base}/api/setup/owner`, fromOrigin("https://attacker.example", "same-origin")),
+      fetch(`${base}/api/setup/owner`, fromOrigin(proxyOrigin, "cross-site")),
+    ]);
+    for (const response of denials) {
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "FORBIDDEN" });
+    }
+    expect(configureOwner).toHaveBeenCalledTimes(1);
   });
 
   it("contains no active password configuration or session route", async () => {

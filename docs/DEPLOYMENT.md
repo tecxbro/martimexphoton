@@ -18,7 +18,9 @@ Configure your hosting environment with:
 
 Supply the infrastructure environment values in section 4 before starting the service. The owner phone, Photon, and ChatGPT are configured from the deployed dashboard.
 
-The Dockerfile installs pinned dependencies with development and optional packages, builds TypeScript, and starts `node dist/server.js` (the same entrypoint as `npm start`). Startup applies the checked-in database migrations. Keep `.npmrc`: the Dockerfile explicitly copies it. Use `/healthz` for liveness, and supply `PORT` if your host requires a port other than the default `10000`. The service URL opens the setup dashboard.
+The Dockerfile installs pinned dependencies with development and optional packages, builds TypeScript, and starts `maritime-entrypoint.sh`, which then runs `node dist/server.js` (the same entrypoint as `npm start`). Startup applies the checked-in database migrations.
+
+When `DATABASE_URL` is unset, the entrypoint starts a local PostgreSQL 15 with its data under `/data/pg`. When `DEPLOYMENT_ID` or `APP_ENCRYPTION_KEY` is unset, it generates the value once and stores it under `/data/secrets`, so restarts keep the same identity. Values set in the environment always win. A host that provides only a persistent `/data` volume, such as Maritime, needs no other resources. The Maritime deploy button also sets `DASHBOARD_TRUSTED_ORIGINS` so the setup page works inside the Maritime agent Dashboard. Keep `.npmrc`: the Dockerfile explicitly copies it. Use `/healthz` for liveness, and supply `PORT` if your host requires a port other than the default `10000`. The service URL opens the setup dashboard.
 
 ## 2. Required accounts and credentials
 
