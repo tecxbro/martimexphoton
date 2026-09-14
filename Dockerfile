@@ -11,6 +11,7 @@ RUN apt-get update \
         git \
         openssl \
         ripgrep \
+        postgresql-15 \
     && rm -rf /var/lib/apt/lists/*
 
 # Persistent application state belongs under Maritime's /data.
@@ -34,5 +35,6 @@ COPY . .
 
 RUN npm run build
 
-# The existing startup lifecycle already runs database migrations.
-CMD ["node", "dist/server.js"]
+# The entrypoint starts a local PostgreSQL on /data when DATABASE_URL is unset,
+# then runs the server. The startup lifecycle applies database migrations.
+CMD ["/app/maritime-entrypoint.sh"]
