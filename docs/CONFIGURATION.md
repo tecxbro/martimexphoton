@@ -121,6 +121,9 @@ Keep `LOG_MESSAGE_CONTENT=false` in production. Enabling raw content logging mat
 | Variable | Required | Default | Where to obtain it | Restart required | Sensitive |
 |---|---:|---:|---|---:|---:|
 | `PORT` | No | `10000` | Host injects or operator chooses | Yes | No |
+| `DASHBOARD_TRUSTED_ORIGINS` | No | Empty | Host operator | Yes | Security-critical |
+
+`DASHBOARD_TRUSTED_ORIGINS` is a comma-separated list of exact origins with no path, such as `https://maritime.sh`. Dashboard setup requests from these origins pass the same-origin check. Set it only when a host serves the dashboard through its own authenticated proxy on a different origin, such as the agent Dashboard on Maritime. Leave it empty everywhere else.
 
 `PORT` must be between 1 and 65535. `NODE_ENV`, `PATH`, and locale variables are runtime/platform inputs rather than template-user configuration and are intentionally not copied into `.env.example`.
 

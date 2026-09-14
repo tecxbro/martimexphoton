@@ -39,6 +39,7 @@ export interface HealthApplicationOptions {
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
   modelSettings?: ModelSettingsController;
+  trustedDashboardOrigins?: readonly string[];
 }
 
 export type ModelSettingsApiErrorCode =
@@ -158,7 +159,7 @@ export function createHealthApplication(
       strict: true,
     }),
   );
-  const sameOrigin = requireSameOrigin();
+  const sameOrigin = requireSameOrigin(options.trustedDashboardOrigins);
   const chatGptStatus = () => {
     if (options.chatgptSetup !== undefined) {
       return options.chatgptSetup.status();
@@ -174,7 +175,9 @@ export function createHealthApplication(
 
   application.get("/", (_request, response) => {
     response.set("cache-control", "no-store");
-    response.redirect(302, "/agent/dashboard");
+    // Relative, so the page also works behind a proxy that serves this app
+    // under a path prefix.
+    response.redirect(302, "agent/dashboard");
   });
 
   application.get("/agent/dashboard", (_request, response) => {
@@ -465,6 +468,7 @@ export async function startHealthServer(input: {
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
   modelSettings?: ModelSettingsController;
+  trustedDashboardOrigins?: readonly string[];
 }): Promise<HealthServer> {
   const application = createHealthApplication(input);
   const server = await new Promise<Server>((resolve, reject) => {

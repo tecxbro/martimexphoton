@@ -49,6 +49,45 @@ const databaseUrlSchema = requiredText("DATABASE_URL")
     "DATABASE_URL must use the postgres or postgresql protocol",
   );
 
+const originListFromEnvironment = (label: string) =>
+  z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .optional()
+      .transform((value, context): string[] => {
+        if (value === undefined) {
+          return [];
+        }
+        const origins: string[] = [];
+        for (const entry of value.split(",")) {
+          const candidate = entry.trim();
+          if (candidate.length === 0) {
+            continue;
+          }
+          let parsed: URL | undefined;
+          try {
+            parsed = new URL(candidate);
+          } catch {
+            parsed = undefined;
+          }
+          const isWebOrigin =
+            parsed !== undefined &&
+            (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+            parsed.origin === candidate;
+          if (!isWebOrigin) {
+            context.addIssue({
+              code: "custom",
+              message: `${label} must be a comma-separated list of origins such as https://example.com`,
+            });
+            return z.NEVER;
+          }
+          origins.push(candidate);
+        }
+        return origins;
+      }),
+  );
+
 const e164PhoneNumberSchema = (label: string) =>
   z
     .string({ error: `${label} must be an E.164 phone number` })
@@ -120,6 +159,9 @@ const rawEnvironmentSchema = z
     // Required infrastructure and process values
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: integerFromEnvironment("PORT", 1, 65_535, 10_000),
+    DASHBOARD_TRUSTED_ORIGINS: originListFromEnvironment(
+      "DASHBOARD_TRUSTED_ORIGINS",
+    ),
     PATH: requiredText("PATH"),
     LANG: optionalText(z.string().trim().min(1)),
     LANGUAGE: optionalText(z.string().trim().min(1)),

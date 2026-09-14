@@ -38,6 +38,33 @@ describe("loadEnvironment", () => {
     );
     expect(environment.INBOUND_DEBOUNCE_MS).toBe(0);
     expect(environment.LOG_MESSAGE_CONTENT).toBe(false);
+    expect(environment.DASHBOARD_TRUSTED_ORIGINS).toEqual([]);
+  });
+
+  it("parses trusted dashboard origins as exact origins", () => {
+    const environment = loadEnvironment(
+      validEnvironment({
+        DASHBOARD_TRUSTED_ORIGINS: " https://maritime.sh, http://localhost:3000 ",
+      }),
+    );
+
+    expect(environment.DASHBOARD_TRUSTED_ORIGINS).toEqual([
+      "https://maritime.sh",
+      "http://localhost:3000",
+    ]);
+  });
+
+  it("rejects a trusted dashboard origin with a path or a non-web scheme", () => {
+    for (const value of [
+      "https://maritime.sh/",
+      "https://maritime.sh/agents",
+      "ftp://maritime.sh",
+      "maritime.sh",
+    ]) {
+      expect(() =>
+        loadEnvironment(validEnvironment({ DASHBOARD_TRUSTED_ORIGINS: value })),
+      ).toThrow(EnvironmentValidationError);
+    }
   });
 
   it("reports all missing required variables in one actionable error", () => {

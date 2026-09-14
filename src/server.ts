@@ -43,6 +43,7 @@ async function main(): Promise<void> {
     },
     photonSetup: runtime.photonSetup,
     modelSettings: runtime.modelSettings,
+    trustedDashboardOrigins: runtime.environment.DASHBOARD_TRUSTED_ORIGINS,
     ...(runtime.chatgptSetup === undefined
       ? {}
       : { chatgptSetup: runtime.chatgptSetup }),

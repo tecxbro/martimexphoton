@@ -80,6 +80,7 @@ export interface StartAgentServiceOptions {
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
   modelSettings?: ModelSettingsController;
+  trustedDashboardOrigins?: readonly string[];
   installSignalHandlers?: boolean;
   onStartupFailure?: (code: string) => void;
 }
@@ -121,6 +122,9 @@ export async function startAgentService(
     ...(options.host === undefined ? {} : { host: options.host }),
     readiness,
     spectrum: spectrumReadiness,
+    ...(options.trustedDashboardOrigins === undefined
+      ? {}
+      : { trustedDashboardOrigins: options.trustedDashboardOrigins }),
     ...(options.deploymentIdentity === undefined
       ? {}
       : { deploymentIdentity: options.deploymentIdentity }),

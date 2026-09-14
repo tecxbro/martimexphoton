@@ -106,7 +106,7 @@ describe("health and readiness endpoints", () => {
       redirect: "manual",
     });
     expect(root.status).toBe(302);
-    expect(root.headers.get("location")).toBe("/agent/dashboard");
+    expect(root.headers.get("location")).toBe("agent/dashboard");
 
     const deployment = await fetch(`${base}/agent/dashboard`);
     expect(deployment.status).toBe(200);

@@ -83,7 +83,7 @@ describe("production executable entrypoint", () => {
       redirect: "manual",
     });
     expect(root.status).toBe(302);
-    expect(root.headers.get("location")).toBe("/agent/dashboard");
+    expect(root.headers.get("location")).toBe("agent/dashboard");
 
     const deployment = await fetch(
       `http://127.0.0.1:${address.port}/agent/dashboard`,
