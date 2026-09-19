@@ -91,6 +91,20 @@ describe("permission profile contracts", () => {
       approvalPolicy: "never",
       consequentialActions: "forbidden",
     });
+    // Task network access applies to workspace-write only, and only on request.
+    expect(resolvePermissionProfile("workspace-write").networkAccessEnabled).toBe(
+      false,
+    );
+    expect(
+      resolvePermissionProfile("workspace-write", { taskNetworkAccess: true })
+        .networkAccessEnabled,
+    ).toBe(true);
+    for (const profile of ["read", "network-read", "approval-required"] as const) {
+      expect(
+        resolvePermissionProfile(profile, { taskNetworkAccess: true })
+          .networkAccessEnabled,
+      ).toBe(false);
+    }
     expect(resolvePermissionProfile("network-read")).toEqual({
       sandboxMode: "read-only",
       networkAccessEnabled: false,

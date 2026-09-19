@@ -27,6 +27,17 @@ function validEnvironment(
 }
 
 describe("loadEnvironment", () => {
+  it("enables task network access unless it is set to disabled", () => {
+    expect(loadEnvironment(validEnvironment()).AGENT_TASK_NETWORK_ACCESS).toBe(
+      "enabled",
+    );
+    expect(
+      loadEnvironment(
+        validEnvironment({ AGENT_TASK_NETWORK_ACCESS: "disabled" }),
+      ).AGENT_TASK_NETWORK_ACCESS,
+    ).toBe("disabled");
+  });
+
   it("defaults to stream intake and needs a signing secret for webhook intake", () => {
     expect(loadEnvironment(validEnvironment()).SPECTRUM_INTAKE_MODE).toBe(
       "stream",

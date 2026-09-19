@@ -144,8 +144,29 @@ export function maximumPermissionForRole(
   return role === "owner" ? configuredOwnerMaximum : "read";
 }
 
+export interface PermissionProfileSettings {
+  /**
+   * Gives `workspace-write` tasks outbound network access, so a task can run
+   * `git clone`, `npm install`, or `curl`. No other profile gets network.
+   *
+   * Security: task commands can read files outside the workspace, including
+   * `CODEX_HOME/auth.json`. With network access, hostile text that the model
+   * reads in a repository or a web page can make a task send such files out.
+   * Set AGENT_TASK_NETWORK_ACCESS=disabled for an agent that works on
+   * untrusted content.
+   */
+  taskNetworkAccess?: boolean;
+}
+
 export function resolvePermissionProfile(
   profile: PermissionProfileName,
+  settings: PermissionProfileSettings = {},
 ): CodexPermissionOptions {
-  return codexPermissionOptionsSchema.parse(PERMISSION_PROFILES[profile]);
+  const options = codexPermissionOptionsSchema.parse(
+    PERMISSION_PROFILES[profile],
+  );
+  if (profile === "workspace-write" && settings.taskNetworkAccess === true) {
+    return { ...options, networkAccessEnabled: true };
+  }
+  return options;
 }

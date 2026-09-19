@@ -56,6 +56,8 @@ export interface CodexClientOptions {
   maximumRuntimeMs?: number;
   maximumConcurrency?: number;
   maximumConcurrencyPerOwner?: number;
+  /** See PermissionProfileSettings.taskNetworkAccess. Off when omitted. */
+  taskNetworkAccess?: boolean;
 }
 
 export interface CodexRunRequest<Output> {
@@ -456,7 +458,9 @@ export class CodexClient implements StructuredCodexRunner {
     const abort = createRunAbortContext(request.signal, timeoutMs);
 
     try {
-      const permission = resolvePermissionProfile(request.permissionProfile);
+      const permission = resolvePermissionProfile(request.permissionProfile, {
+        taskNetworkAccess: this.options.taskNetworkAccess === true,
+      });
       const config = {
         cli_auth_credentials_store: "file",
         forced_login_method:
