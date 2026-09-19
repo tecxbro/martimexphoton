@@ -44,6 +44,9 @@ Use `canceled` when the application aborts the task. Preserve safe partial findi
 
 - Store substantial output in an approved workspace path.
 - Return a path and short description.
+- An artifact is one regular file. Give its path relative to the workspace root, for example `notes/summary.md`. Never give an absolute path.
+- A directory is not an artifact. When the result is a directory, for example a cloned repository, return an empty `artifacts` list and name the directory in `userSafeSummary`.
+- The application rejects the whole result when one artifact breaks these rules.
 - Do not paste large files into the structured result.
 - Never reference a path outside the approved workspace.
 
