@@ -47,6 +47,9 @@ async function main(): Promise<void> {
     ...(runtime.chatgptSetup === undefined
       ? {}
       : { chatgptSetup: runtime.chatgptSetup }),
+    ...(runtime.spectrumWebhook === undefined
+      ? {}
+      : { spectrumWebhook: runtime.spectrumWebhook }),
     onStartupFailure: (code) => {
       runtime.logger.error(
         { component: "bootstrap", errorCode: code },

@@ -1,4 +1,11 @@
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdtemp,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -127,6 +134,23 @@ describe("persistent Codex and workspace storage", () => {
     const contents = await readFile(configPath, "utf8");
     expect(contents).toContain('\ncli_auth_credentials_store = "file"\n');
     expect(contents).toContain('forced_login_method = "chatgpt"\n');
+  });
+
+  it("makes a new workspace a git repository and keeps an existing one", async () => {
+    const root = await fixtureRoot();
+    const input = {
+      codexHome: join(root, "codex"),
+      workspaceRoot: join(root, "workspaces"),
+      authMode: "chatgpt" as const,
+    };
+
+    await preparePersistentStorage(input);
+    const head = join(input.workspaceRoot, ".git", "HEAD");
+    expect((await stat(head)).isFile()).toBe(true);
+
+    await writeFile(head, "ref: refs/heads/kept-by-owner\n");
+    await preparePersistentStorage(input);
+    expect(await readFile(head, "utf8")).toBe("ref: refs/heads/kept-by-owner\n");
   });
 
   it("rejects overlapping protected roots", async () => {

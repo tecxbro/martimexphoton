@@ -134,6 +134,11 @@ import { PhotonCredentialsStore } from "./photon-credentials.js";
 import { createOwnerBindingRevisionPort } from "./owner-binding-revision.js";
 import { RestartableOutboundTransport } from "./restartable-outbound-transport.js";
 import type { SpectrumRunHandle } from "./spectrum-run-handle.js";
+import {
+  SpectrumWebhookIntake,
+  type SpectrumWebhookController,
+  type SpectrumWebhookVerifier,
+} from "../transport/webhook-intake.js";
 import { preparePersistentStorage } from "./persistent-storage.js";
 import {
   createDeploymentIdentityController,
@@ -172,6 +177,8 @@ export interface ProductionRuntime {
   photonSetup: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
   modelSettings: ModelSettingsController;
+  /** Present only when SPECTRUM_INTAKE_MODE=webhook. */
+  spectrumWebhook?: SpectrumWebhookController;
 }
 
 function required<Value>(value: Value | undefined, stage: string): Value {
@@ -185,6 +192,12 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
   // Configuration and protected values
   const environment = loadEnvironment();
   const cipher = createDataCipher(environment.APP_ENCRYPTION_KEY);
+  // Webhook intake replaces the persistent stream on hosts that put the agent
+  // to sleep. It stays undefined in the default stream mode.
+  const webhookIntake =
+    environment.SPECTRUM_INTAKE_MODE === "webhook"
+      ? new SpectrumWebhookIntake<Space, unknown>()
+      : undefined;
   const photonCredentialsStore = new PhotonCredentialsStore({
     directory: resolve(dirname(environment.CODEX_HOME), "photon"),
     encryptionKey: environment.APP_ENCRYPTION_KEY,
@@ -1073,7 +1086,14 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
         "Spectrum credential setup",
       );
       const state = required(composition, "Spectrum startup");
-      const app = await createSpectrumApp(credentials);
+      const app = await createSpectrumApp(
+        credentials,
+        environment.SPECTRUM_WEBHOOK_SECRET,
+      );
+      const webhookVerifier = app as unknown as SpectrumWebhookVerifier<
+        Space,
+        unknown
+      >;
       const resolver = createSpectrumSpaceResolver(app);
       const conversationPresence = new ConversationPresenceCoordinator({
         operational: state.operational,
@@ -1091,6 +1111,7 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
       const runId = `spectrum-${++nextSpectrumRun}`;
       const controller = new AbortController();
       outboundTransport.attach(runId, nativeOutbound);
+      webhookIntake?.attach(webhookVerifier);
       activeConversationPresence = conversationPresence;
 
       const authorizer = new DeterministicSenderAuthorizer({
@@ -1148,7 +1169,15 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
       );
       const loop = runSpectrumMessageLoop({
         authorizeAndIngest: boundary,
-        messages: () => app.messages,
+        // In webhook mode the stream is never opened. Spectrum delivers to
+        // both a registered webhook and an open stream, so opening it would
+        // only produce duplicates.
+        messages: () =>
+          webhookIntake === undefined
+            ? app.messages
+            : (webhookIntake.messages(
+                controller.signal,
+              ) as unknown as typeof app.messages),
         readiness: new SpectrumReadiness(),
         conversationPresence,
         signal: controller.signal,
@@ -1170,6 +1199,7 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
         })
         .finally(() => {
           outboundTransport.detach(runId);
+          webhookIntake?.detach(webhookVerifier);
           if (activeConversationPresence === conversationPresence) {
             activeConversationPresence = undefined;
           }
@@ -1242,5 +1272,6 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
     photonSetup,
     modelSettings,
     ...(chatgptSetup === undefined ? {} : { chatgptSetup }),
+    ...(webhookIntake === undefined ? {} : { spectrumWebhook: webhookIntake }),
   };
 }

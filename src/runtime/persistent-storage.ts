@@ -7,8 +7,10 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
+import { promisify } from "node:util";
 
 import type { CodexAuthMode } from "../agent/child-environment.js";
 
@@ -61,6 +63,33 @@ async function ensureDirectory(path: string): Promise<void> {
     );
   }
   await access(path, constants.R_OK | constants.W_OK | constants.X_OK);
+}
+
+const runFile = promisify(execFile);
+
+/**
+ * Makes the workspace root a git repository when it is not one.
+ *
+ * Execution tasks run Codex with its repository check on. Codex refuses to run
+ * in a directory that is not inside a git repository ("Not inside a trusted
+ * directory"), so a new deployment with an empty workspace failed every task.
+ * An existing repository is left unchanged.
+ */
+async function ensureWorkspaceRepository(workspaceRoot: string): Promise<void> {
+  try {
+    await stat(resolve(workspaceRoot, ".git"));
+    return;
+  } catch {
+    // No repository yet.
+  }
+  try {
+    await runFile("git", ["init", "--quiet", workspaceRoot]);
+  } catch (error) {
+    throw new PersistentStorageError(
+      "AGENT_WORKSPACE_ROOT could not be initialized as a git repository. Install git in the image; Codex tasks cannot run without it.",
+      { cause: error },
+    );
+  }
 }
 
 async function ensureCodexConfiguration(
@@ -154,6 +183,7 @@ export async function preparePersistentStorage(input: {
   try {
     await ensureDirectory(codexHome);
     await ensureDirectory(workspaceRoot);
+    await ensureWorkspaceRepository(workspaceRoot);
     const configuration = await ensureCodexConfiguration(
       codexHome,
       input.authMode,

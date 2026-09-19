@@ -8,6 +8,7 @@ import express, {
 } from "express";
 
 import type { ChatGptSetupController } from "../agent/codex-app-server-auth.js";
+import type { SpectrumWebhookController } from "../transport/webhook-intake.js";
 import {
   modelSelectionSchema,
   type DeploymentModelSettings,
@@ -39,6 +40,7 @@ export interface HealthApplicationOptions {
   deploymentIdentity?: DeploymentIdentityController;
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
+  spectrumWebhook?: SpectrumWebhookController;
   modelSettings?: ModelSettingsController;
   trustedDashboardOrigins?: readonly string[];
 }
@@ -149,11 +151,44 @@ const jsonErrorHandler: ErrorRequestHandler = (
   next(error);
 };
 
+/** Path that the host forwards Spectrum webhook deliveries to. */
+export const SPECTRUM_WEBHOOK_PATH = "/webhooks/spectrum";
+// Spectrum sends slim JSON without attachment bytes.
+const SPECTRUM_WEBHOOK_BODY_LIMIT = "1mb";
+
 export function createHealthApplication(
   options: HealthApplicationOptions,
 ): Express {
   const application = express();
   application.disable("x-powered-by");
+  // Registered before the JSON parser: the signature covers the exact body
+  // bytes, so this route must read the raw body and never a parsed one.
+  if (options.spectrumWebhook !== undefined) {
+    const spectrumWebhook = options.spectrumWebhook;
+    application.post(
+      SPECTRUM_WEBHOOK_PATH,
+      express.raw({ type: () => true, limit: SPECTRUM_WEBHOOK_BODY_LIMIT }),
+      async (request, response) => {
+        const headers: Record<string, string> = {};
+        for (const [name, value] of Object.entries(request.headers)) {
+          if (typeof value === "string") headers[name] = value;
+        }
+        try {
+          const result = await spectrumWebhook.handle({
+            body: Buffer.isBuffer(request.body)
+              ? request.body
+              : new Uint8Array(),
+            headers,
+          });
+          response.status(result.status).set(result.headers);
+          response.send(Buffer.from(result.body));
+        } catch {
+          // A 5xx makes Spectrum send the delivery again.
+          response.status(500).json({ error: "SPECTRUM_WEBHOOK_FAILED" });
+        }
+      },
+    );
+  }
   application.use(
     express.json({
       limit: "2kb",
@@ -466,6 +501,7 @@ export async function startHealthServer(input: {
   deploymentIdentity?: DeploymentIdentityController;
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
+  spectrumWebhook?: SpectrumWebhookController;
   modelSettings?: ModelSettingsController;
   trustedDashboardOrigins?: readonly string[];
 }): Promise<HealthServer> {
