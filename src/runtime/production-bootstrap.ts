@@ -308,6 +308,7 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
     maximumRuntimeMs: environment.MAX_TASK_RUNTIME_MS,
     maximumConcurrency: environment.MAX_EXECUTION_CONCURRENCY,
     maximumConcurrencyPerOwner: environment.MAX_OWNER_EXECUTION_CONCURRENCY,
+    taskNetworkAccess: environment.AGENT_TASK_NETWORK_ACCESS === "enabled",
   });
   const pairRunner = createCodexPairRunner(
     codex,

@@ -136,7 +136,9 @@ Explicitly exclude:
 
 ### Network
 
-- Disabled by default.
+- `read`, `network-read`, and `approval-required` tasks have no outbound network from task commands.
+- `workspace-write` tasks have outbound network when `AGENT_TASK_NETWORK_ACCESS=enabled`, which is the default, so a task can run `git clone`, `npm install`, or `curl`.
+- Risk of that default: task commands can read files outside the workspace, including `CODEX_HOME/auth.json` and the generated secrets under `/data/secrets` (writes outside the workspace are blocked). With network access, hostile text that the model reads in a repository or a web page can make a task send those files out. Set `AGENT_TASK_NETWORK_ACCESS=disabled` for an agent that works on untrusted repositories or web content.
 - `network-read` profile allows only the supported Codex web/network mode and remains subject to prompt-injection defenses.
 - External-account mutations always require approval even when network is enabled.
 

@@ -203,6 +203,10 @@ const rawEnvironmentSchema = z
     CODEX_HOME: protectedPathSchema("CODEX_HOME"),
     AGENT_WORKSPACE_ROOT: protectedPathSchema("AGENT_WORKSPACE_ROOT"),
     CODEX_AUTH_MODE: z.enum(["chatgpt", "api_key"]).default("chatgpt"),
+    // Outbound network for workspace-write tasks (git clone, npm install,
+    // curl). Set "disabled" for an agent that works on untrusted content:
+    // see PermissionProfileSettings.taskNetworkAccess for the risk.
+    AGENT_TASK_NETWORK_ACCESS: z.enum(["enabled", "disabled"]).default("enabled"),
     OPENAI_API_KEY: optionalText(
       z.string().trim().min(1, "OPENAI_API_KEY must not be empty"),
     ),
