@@ -5,6 +5,7 @@ import {
 } from "./http/readiness.js";
 import type { ChatGptSetupController } from "./agent/codex-app-server-auth.js";
 import { startHealthServer, type HealthServer } from "./http/server.js";
+import type { SpectrumWebhookController } from "./transport/webhook-intake.js";
 import type { ModelSettingsController } from "./http/server.js";
 import type { DeploymentPageOptions } from "./http/deployment-page.js";
 import type {
@@ -79,6 +80,7 @@ export interface StartAgentServiceOptions {
   deploymentPage?: Omit<DeploymentPageOptions, "runtimeMode">;
   photonSetup?: PhotonSetupController;
   chatgptSetup?: ChatGptSetupController;
+  spectrumWebhook?: SpectrumWebhookController;
   modelSettings?: ModelSettingsController;
   trustedDashboardOrigins?: readonly string[];
   installSignalHandlers?: boolean;
@@ -141,6 +143,9 @@ export async function startAgentService(
     ...(options.chatgptSetup === undefined
       ? {}
       : { chatgptSetup: options.chatgptSetup }),
+    ...(options.spectrumWebhook === undefined
+      ? {}
+      : { spectrumWebhook: options.spectrumWebhook }),
     ...(options.modelSettings === undefined
       ? {}
       : { modelSettings: options.modelSettings }),

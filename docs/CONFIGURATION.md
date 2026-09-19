@@ -10,6 +10,8 @@ All changes require a service restart. Hosting-managed values should be changed 
 |---|---:|---|---|---:|---:|
 | `SPECTRUM_PROJECT_ID` | Yes | — | Photon dashboard | Yes | Yes |
 | `SPECTRUM_PROJECT_SECRET` | Yes | — | Photon dashboard | Yes | Yes |
+| `SPECTRUM_INTAKE_MODE` | No | `stream` | Host operator | Yes | No |
+| `SPECTRUM_WEBHOOK_SECRET` | Only when `SPECTRUM_INTAKE_MODE=webhook` | — | Spectrum webhook registration | Yes | Yes |
 | `DATABASE_URL` | Yes | — | Your PostgreSQL service | Yes | Yes |
 
 `DATABASE_URL` must use the `postgres://` or `postgresql://` protocol. Supply it as a service secret.

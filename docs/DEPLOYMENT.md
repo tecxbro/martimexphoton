@@ -22,6 +22,16 @@ The Dockerfile installs pinned dependencies with development and optional packag
 
 When `DATABASE_URL` is unset, the entrypoint starts a local PostgreSQL 15 with its data under `/data/pg`. When `DEPLOYMENT_ID` or `APP_ENCRYPTION_KEY` is unset, it generates the value once and stores it under `/data/secrets`, so restarts keep the same identity. Values set in the environment always win. A host that provides only a persistent `/data` volume, such as Maritime, needs no other resources. The Maritime deploy button also sets `DASHBOARD_TRUSTED_ORIGINS` so the setup page works inside the Maritime agent Dashboard. Keep `.npmrc`: the Dockerfile explicitly copies it. Use `/healthz` for liveness, and supply `PORT` if your host requires a port other than the default `10000`. The service URL opens the setup dashboard.
 
+### Webhook intake for hosts that put the agent to sleep
+
+The default intake holds a persistent `app.messages` stream. A host that snapshots and stops an idle agent, such as Maritime with auto-sleep, cannot hold that stream, and nothing wakes the agent when a message arrives. For those hosts only, set `SPECTRUM_INTAKE_MODE=webhook`:
+
+1. Register a webhook with Spectrum for the project (`POST https://spectrum.photon.codes/projects/$PROJECT_ID/webhooks/`, see <https://photon.codes/docs/webhooks/quickstart>). The URL is the host's public address for the path `/webhooks/spectrum`. Save the signing secret. Spectrum shows it one time.
+2. Set `SPECTRUM_WEBHOOK_SECRET` to that secret and `SPECTRUM_INTAKE_MODE=webhook`, then restart.
+3. On Maritime, set the agent's signed webhook address to the path `webhooks/spectrum` with the same secret. Maritime checks the signature before it wakes the agent, and this service checks it again.
+
+In webhook mode the service never opens the stream, because Spectrum delivers to a registered webhook and to an open stream at the same time. Deliveries are at-least-once; the durable inbound consumer already ignores a message it has seen. Spectrum waits 30 seconds per attempt and makes 6 attempts, and it has no dead-letter queue, so a host wake that takes longer than that loses the message. Hosts that keep the agent running should keep the default stream mode.
+
 ## 2. Required accounts and credentials
 
 | Requirement | Why it is needed | Where to obtain it |

@@ -174,6 +174,13 @@ const rawEnvironmentSchema = z
     SPECTRUM_PROJECT_SECRET: optionalText(
       z.string().trim().min(1, "SPECTRUM_PROJECT_SECRET must not be empty"),
     ),
+    SPECTRUM_INTAKE_MODE: z.enum(["stream", "webhook"]).default("stream"),
+    SPECTRUM_WEBHOOK_SECRET: optionalText(
+      z
+        .string()
+        .trim()
+        .min(16, "SPECTRUM_WEBHOOK_SECRET must be at least 16 characters"),
+    ),
     DATABASE_URL: databaseUrlSchema,
     OWNER_PHONE_NUMBER: optionalText(
       e164PhoneNumberSchema("OWNER_PHONE_NUMBER"),
@@ -287,6 +294,18 @@ const rawEnvironmentSchema = z
         ],
         message:
           "SPECTRUM_PROJECT_ID and SPECTRUM_PROJECT_SECRET must either both be set or both be omitted until Photon setup is complete",
+      });
+    }
+
+    if (
+      environment.SPECTRUM_INTAKE_MODE === "webhook" &&
+      environment.SPECTRUM_WEBHOOK_SECRET === undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["SPECTRUM_WEBHOOK_SECRET"],
+        message:
+          "SPECTRUM_WEBHOOK_SECRET is required when SPECTRUM_INTAKE_MODE=webhook. Register the webhook with Spectrum and set its signing secret.",
       });
     }
 

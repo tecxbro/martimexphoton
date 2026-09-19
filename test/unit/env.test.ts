@@ -27,6 +27,22 @@ function validEnvironment(
 }
 
 describe("loadEnvironment", () => {
+  it("defaults to stream intake and needs a signing secret for webhook intake", () => {
+    expect(loadEnvironment(validEnvironment()).SPECTRUM_INTAKE_MODE).toBe(
+      "stream",
+    );
+    expect(() =>
+      loadEnvironment(validEnvironment({ SPECTRUM_INTAKE_MODE: "webhook" })),
+    ).toThrow(EnvironmentValidationError);
+    const webhook = loadEnvironment(
+      validEnvironment({
+        SPECTRUM_INTAKE_MODE: "webhook",
+        SPECTRUM_WEBHOOK_SECRET: "a3f8e29b0c1d4e5f8a7b6c5d4e3f2a1b",
+      }),
+    );
+    expect(webhook.SPECTRUM_INTAKE_MODE).toBe("webhook");
+  });
+
   it("normalizes documented defaults, handles, and paths", () => {
     const environment = loadEnvironment(validEnvironment());
 

@@ -53,6 +53,7 @@ export function resolveSpectrumCloudCredentials(
 
 export function buildSpectrumCloudOptions(
   credentials: SpectrumCloudCredentials,
+  webhookSecret?: string,
 ) {
   // spectrum-ts 12.7.0 declares the optional empty iMessage config as a
   // `never` parameter under the repository's TypeScript 7 compiler. The
@@ -66,14 +67,16 @@ export function buildSpectrumCloudOptions(
     projectId: credentials.projectId,
     projectSecret: credentials.projectSecret,
     providers: [provider] as [typeof provider],
+    ...(webhookSecret === undefined ? {} : { webhookSecret }),
   };
 }
 
 /** Creates the long-lived Spectrum Cloud application and its iMessage gRPC provider. */
 export async function createSpectrumApp(
   credentials: SpectrumCloudCredentials,
+  webhookSecret?: string,
 ) {
-  const options = buildSpectrumCloudOptions(credentials);
+  const options = buildSpectrumCloudOptions(credentials, webhookSecret);
   return Spectrum<typeof options.providers>(options);
 }
 

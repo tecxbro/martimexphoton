@@ -154,7 +154,7 @@ npm test -- test/unit/transport/message-loop.test.ts test/unit/transport/spectru
 
 **Expected result:** Offline reconnect and provider-narrowing contracts pass. After live credentials recover, `/readyz` returns 200.
 
-**Do not:** Print the Spectrum secret or line address, restore a webhook transport, or create a second messaging SDK.
+**Do not:** Print the Spectrum secret or line address, enable webhook intake on a host that keeps the agent running (it is only for hosts that put the agent to sleep, see `docs/DEPLOYMENT.md`), or create a second messaging SDK.
 
 ## Authorized number is rejected
 
