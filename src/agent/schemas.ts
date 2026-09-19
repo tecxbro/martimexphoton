@@ -128,6 +128,11 @@ export const artifactRefSchema = z
       .refine(
         (value) => !value.split(/[\\/]+/u).includes(".."),
         "artifact path must remain inside the workspace",
+      )
+      // The refinements above do not reach the JSON Schema that Codex gets,
+      // so the description carries the same rule to the model.
+      .describe(
+        "Path of one regular file, relative to the workspace root, for example notes/summary.md. Never an absolute path, never a directory, never '..'.",
       ),
     description: boundedTextSchema(500),
   })

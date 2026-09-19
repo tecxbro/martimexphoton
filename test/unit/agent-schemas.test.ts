@@ -223,3 +223,27 @@ describe("model output contracts", () => {
     ).toBe(true);
   });
 });
+
+describe("artifact contract reaches the model", () => {
+  // Zod refinements (relative path, no "..") are not part of the generated
+  // JSON Schema. Without the description, Codex returned an absolute directory
+  // path for a cloned repository and the whole successful task was rejected.
+  it("states the path rule in the JSON Schema that Codex receives", () => {
+    const generated = JSON.stringify(
+      createCodexOutputJsonSchema(codexExecutionResultSchema),
+    );
+
+    expect(generated).toContain("relative to the workspace root");
+    expect(generated).toContain("never a directory");
+  });
+
+  it("states the same rule in the execution prompt", () => {
+    const prompt = readFileSync(
+      resolve("prompts/execution.system.md"),
+      "utf8",
+    );
+
+    expect(prompt).toContain("A directory is not an artifact");
+    expect(prompt).toContain("relative to the workspace root");
+  });
+});
