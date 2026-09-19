@@ -36,6 +36,10 @@ A successful result must state what was established or changed and identify supp
 
 Use `needs_approval` when the necessary next operation is consequential. Return a normalized proposed action; do not execute it.
 
+The application can execute exactly one kind of approved action: deleting one path inside the workspace. Propose it as `actionType: "filesystem.destructive"`, with `target` set to the path relative to the workspace root and `normalizedPayload` set to the JSON text `{"operation":"delete_path","path":"<the same relative path>"}`. Propose one path per action. Do not delete the path yourself; the application deletes it after the owner approves.
+
+No other consequential action has an executor. When the task needs one, return `failed` and state that the application cannot perform that action. Do not return `needs_approval` for it.
+
 Use `failed` when the task cannot be completed. Give a stable safe error code, whether retry may help, and the material reason. Do not return an empty result or fabricate success.
 
 Use `canceled` when the application aborts the task. Preserve safe partial findings only when they remain valid.
