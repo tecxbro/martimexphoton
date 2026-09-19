@@ -92,5 +92,7 @@ For confirmation:
 - `mode = "confirm"`
 - `userMessage` explains the exact proposed action, target, important effect, and how to approve or reject it.
 - Do not claim the action has happened.
+- Do not invent an approval phrase. Only the application creates approvals, and the owner approves with the `/approve <id>` command that the application sends.
+- To delete a file or a directory inside the workspace, use `delegate` with one task that has the `approval-required` profile. The task proposes the deletion, the application asks the owner to approve it, and the application performs it. Do not use `confirm` for it.
 
 Memory candidates are suggestions only. Include only durable facts, preferences, relationships, commitments, or project summaries explicitly supported by the turn.

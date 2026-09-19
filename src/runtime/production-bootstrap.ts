@@ -133,6 +133,7 @@ import {
 import { PhotonCredentialsStore } from "./photon-credentials.js";
 import { createOwnerBindingRevisionPort } from "./owner-binding-revision.js";
 import { RestartableOutboundTransport } from "./restartable-outbound-transport.js";
+import { WorkspaceDeleteExecutor } from "../actions/workspace-delete-executor.js";
 import type { SpectrumRunHandle } from "./spectrum-run-handle.js";
 import {
   SpectrumWebhookIntake,
@@ -681,7 +682,14 @@ export async function createProductionRuntime(): Promise<ProductionRuntime> {
       const actionExecutions = new ActionExecutionRepository(client.database, {
         encryptExecutionResult: cipher.encrypt,
       });
-      const executors = new ActionExecutorRegistry();
+      // The one reviewed executor: delete one approved path inside the
+      // workspace. Every other action type still has no executor and cannot be
+      // approved.
+      const executors = new ActionExecutorRegistry([
+        new WorkspaceDeleteExecutor({
+          workspaceRoot: environment.AGENT_WORKSPACE_ROOT,
+        }),
+      ]);
       const publishApprovalProgression = async (
         progression: ApprovalChainProgression | null,
       ): Promise<void> => {

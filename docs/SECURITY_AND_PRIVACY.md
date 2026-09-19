@@ -176,6 +176,8 @@ Read-only inspection and drafting may proceed without approval when policy allow
 7. The action worker decrypts the stored payload, recomputes its hash, and passes it directly to the registered code-owned executor.
 8. The executor uses the action-execution ID as its idempotency key; duplicate jobs cannot create a second execution.
 
+The starter registers one executor, `WorkspaceDeleteExecutor` for `filesystem.destructive`. Its only payload is `{"operation":"delete_path","path":"<path relative to the workspace root>"}`. It refuses an absolute path, a `..` segment, the workspace root, the workspace repository (`.git`), and a path whose parent leaves the workspace through a symbolic link. It removes a symbolic link as a link. A path that is already absent is a success, so a repeated execution is safe. Every other action type has no executor: the approval request fails before an approval row exists, and the owner is never asked to approve it.
+
 A natural-language “yes” is accepted only from the owner when exactly one pending approval exists in the permitted space. Collaborators and other senders are rejected. Otherwise the user receives a disambiguation message. Codex is not called between approval and execution and cannot reinterpret the approved payload.
 
 ## 12. Prompt injection
