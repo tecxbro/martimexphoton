@@ -33,7 +33,7 @@ function startupOrigins(override?: string): string {
       DEPLOYMENT_ID: "test-deployment-not-used",
       APP_ENCRYPTION_KEY: "test-key-not-used",
     };
-    if (override !== undefined) env.DASHBOARD_TRUSTED_ORIGINS = override;
+    if (override !== undefined) env["DASHBOARD_TRUSTED_ORIGINS"] = override;
     const result = spawnSync("bash", [join(root, "maritime-entrypoint.sh")], {
       cwd: root,
       env,
