@@ -7,6 +7,12 @@
 # Values set in the environment always win.
 set -euo pipefail
 
+# This entrypoint is the Maritime adapter used by the included Dockerfile.
+# Maritime serves the dashboard through its authenticated proxy, not the
+# container origin. Keep the default here, not in the shared HTTP middleware.
+# An explicit override (including an empty string) always wins.
+export DASHBOARD_TRUSTED_ORIGINS="${DASHBOARD_TRUSTED_ORIGINS-https://maritime.sh}"
+
 PG_BIN=/usr/lib/postgresql/15/bin
 PG_DATA=/data/pg
 PG_SOCKET_DIR=/run/postgresql
